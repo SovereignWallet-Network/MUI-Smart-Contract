@@ -42,9 +42,9 @@ contract MUIToken is owned,StandardToken {
 
     mapping (address => bool) public frozenAccount;
     event FrozenFunds(address target, bool frozen);
-    event Buy(address _buyer, uint256 _fund);
-    event Sell(address _seller, uint256 _fund, uint256 _sellPrice);
-    event Send(address _from, address _to, uint256 _amount);
+    event Buy(address indexed _buyer, uint256 indexed _fund);
+    event Sell(address indexed _seller, uint256 indexed _fund, uint256 indexed _sellPrice, uint256  _etherAmount);   // _etherAmount : ether amount that user should received back 
+    event Send(address indexed _from, address indexed _to, uint256 indexed _amount);
 
     function MUIToken(
         ) {
@@ -89,22 +89,27 @@ contract MUIToken is owned,StandardToken {
         availableSupply = _value;
     }
 
-    function buy(address _buyer, uint256 _amount) public {
+    function buy(address _buyer, uint256 _amount) public {                      // _amount : amount of eth
+        uint256 _muiAmount = _amount.mul(buyPrice);
         require(availableSupply > 0);
-        require(availableSupply >= availableSupply.sub(_amount));
-        require(balances[owner] >= _amount);
-        availableSupply = availableSupply.sub(_amount);
-        _transfer(owner, _buyer, _amount);
-        Buy(_buyer, _amount);
+        require(availableSupply >= availableSupply.sub(_muiAmount));
+        require(balances[owner] >= _muiAmount);
+        availableSupply = availableSupply.sub(_muiAmount);
+        _transfer(owner, _buyer, _muiAmount);
+        Buy(_buyer, _muiAmount);
     }
 
-    function sell(address _seller, uint256 _amount) public {
-        require(balances[owner] >= _amount);
+    function sell(address _seller, uint256 _amount) public {                    // _amount : amount of mui
+        uint256 _etherAmount = _amount.div(sellPrice);
+        uint256 _ownerBalance = owner.balance;
+        require(_ownerBalance >= _ownerBalance.sub(_etherAmount));              // ether
+        require(balances[owner] >= _amount);                                    // token
         _transfer(_seller, owner, _amount);
-        Sell(_seller, _amount, sellPrice);                                       // prove the current sellPrice
+        Sell(_seller, _amount, sellPrice, _etherAmount);                        // prove the current sellPrice
     }
 
     function send(address _from, address _to, uint256 _amount) public {
+        require(balances[_from] >= balances[_from].sub(_amount));
         _transfer(_from, _to, _amount);
         Send(_from, _to, _amount);
     }
