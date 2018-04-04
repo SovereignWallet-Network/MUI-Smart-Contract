@@ -37,8 +37,10 @@ contract MUIToken is owned,StandardToken {
 
     uint256 public sellPrice;
     uint256 public buyPrice;
+    uint256 public bidPrice;
 
     uint256 public availableSupply;
+    uint256 public bidSupply;
 
     mapping (address => bool) public frozenAccount;
     event FrozenFunds(address target, bool frozen);
@@ -79,14 +81,23 @@ contract MUIToken is owned,StandardToken {
         FrozenFunds(target, freeze);
     }
 
-    function setPrices(uint256 newSellPrice, uint256 newBuyPrice) onlyOwner public {
-        sellPrice = newSellPrice;
-        buyPrice = newBuyPrice;
+    function setPrices(uint256 _newSellPrice, uint256 _newBuyPrice) onlyOwner public {
+        sellPrice = _newSellPrice;
+        buyPrice  = _newBuyPrice;
     }
-
+    
+    function setBidPrice(uint256 _value) onlyOwner public {
+        bidPrice = _value;
+    }
+    
     function setAvailableSupply(uint256 _value) onlyOwner public {
         require (balances[owner] >= _value);
         availableSupply = _value;
+    }
+    
+    function setBidSupply(uint256 _value) onlyOwner public {
+        require (balances[owner] >= _value);
+        bidSupply = _value;
     }
 
     function buy(address _buyer, uint256 _amount) public {                      // _amount : amount of eth
@@ -100,12 +111,23 @@ contract MUIToken is owned,StandardToken {
     }
 
     function sell(address _seller, uint256 _amount) public {                    // _amount : amount of mui
-        uint256 _etherAmount = _amount.div(sellPrice);
+        uint256 _price;
+        uint256 _etherAmount;
         uint256 _ownerBalance = owner.balance;
+        
+        if (bidSupply > 0) {
+            require(bidSupply >= bidSupply.sub(_amount));
+            _price = bidPrice;
+            _etherAmount = _amount.div(_price);
+            bidSupply = bidSupply.sub(_amount);
+        } else {
+            _price = sellPrice;
+            _etherAmount = _amount.div(_price);
+        }
         require(_ownerBalance >= _ownerBalance.sub(_etherAmount));              // ether
-        require(balances[owner] >= _amount);                                    // token
+        require(balances[owner] >= _amount); 
         _transfer(_seller, owner, _amount);
-        Sell(_seller, _amount, sellPrice, _etherAmount);                        // prove the current sellPrice
+        Sell(_seller, _amount, _price, _etherAmount);                           // prove the current sellPrice
     }
 
     function send(address _from, address _to, uint256 _amount) public {
