@@ -150,7 +150,7 @@ contract MUIToken is owned,StandardToken {
         Buy(_buyer, _muiAmount);
     }
 
-    /* Owner send the amount of ehter proportionalto the number of tokens received to seller'saccount. 
+    /* Owner send the amount of ehter proportional to the number of tokens received to seller's account. 
        The price of token is set depening on existence of bidSupply.  
        @ param _seller seller address
        @ param _amount amount of mui
