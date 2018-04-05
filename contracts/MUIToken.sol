@@ -20,8 +20,6 @@ contract owned {
 
 }
 
-interface tokenRecipient { function receiveApproval(address _from, uint256 _value, address _token, bytes _extraData) public; }
-
 contract MUIToken is owned,StandardToken {
 
     using SafeMath for uint256;
@@ -61,7 +59,12 @@ contract MUIToken is owned,StandardToken {
         availableSupply = 0;
     }
     
-    /* Transfer _value amount the balance from _from account to _to account */
+    /* Transfer _value amount the balance from _from account to _to account 
+       @ notice can be called only by this contract
+       @ param _from  src address
+       @ param _ton   dst address
+       @ param _value amount of mui token
+    */
     function _transfer(address _from, address _to, uint256 _value) internal {
         require (_to != 0x0);                                                   // Prevent transfer to 0x0 address. Use burn() instead
         require (balances[_from] >= _value);                                    // Check if the sender has enough
@@ -73,7 +76,11 @@ contract MUIToken is owned,StandardToken {
         Transfer(_from, _to, _value);
     }
 
-    /* Mint the mintedAmount of token to the target account and add to totalSupply as much as the minted amount. */
+    /* Mint the mintedAmount of token to the target account and add to totalSupply as much as the minted amount. 
+       @ notice can be called only by admin
+       @ param  target dst address
+       @ param  mintedAmount amount minted mui tokens
+    */
     function mintToken(address target, uint256 mintedAmount) onlyOwner public {
         balances[target] = balances[target].add(mintedAmount);
         totalSupply = totalSupply.add(mintedAmount);
@@ -82,37 +89,57 @@ contract MUIToken is owned,StandardToken {
     }
 
     /* Freeze the account  which is able to limited access to this smart contract.
-       Freezed account is not able to transfer its token. */
+       Freezed account is not able to transfer its token. 
+       @ notice can be called only by admin
+       @ param  target target address
+       @ param  freeze add to frozendAccount when it's true
+    */
     function freezeAccount(address target, bool freeze) onlyOwner public {
         frozenAccount[target] = freeze;
         FrozenFunds(target, freeze);
     }
 
-    /* Set the current buy and sell prices. */
+    /* Set the current buy and sell prices. 
+       @ notice can be called only by admin
+       @ param _newSellPrice mui token sell price
+       @ param _newBuyPrice mui token buy price
+    */
     function setPrices(uint256 _newSellPrice, uint256 _newBuyPrice) onlyOwner public {
         sellPrice = _newSellPrice;
         buyPrice  = _newBuyPrice;
     }
     
-    /* Set the bid price of the buyer at the time of purchase. */
+    /* Set the bid price of the buyer at the time of purchase. 
+       @ notice can be called only by admin
+       @ param  _value mui token bid price
+    */
     function setBidPrice(uint256 _value) onlyOwner public {
         bidPrice = _value;
     }
     
-    /* Set the limited amount of supply that buyer can currently buy. */
+    /* Set the limited amount of supply that buyer can currently buy. 
+       @ notice can be called only by admin
+       @ param  _value current mui available supply
+    */
     function setAvailableSupply(uint256 _value) onlyOwner public {
         require (balances[owner] >= _value);
         availableSupply = _value;
     }
     
-    /* Set the amount of supply that buyers can buy at the time of purchase. */
+    /* Set the amount of supply that buyers can buy at the time of purchase. 
+       @ notice can be called only by admin
+       @ param  _value current mui bid supply
+    */
     function setBidSupply(uint256 _value) onlyOwner public {
         require (balances[owner] >= _value);                                    
         bidSupply = _value;
     }
 
     /* Owner transfers the number of tokens proportional to the ether amount received  to buyer's account.
-       The available supply is reduced by the amount of tokens purchased by the buyer. */
+       The available supply is reduced by the amount of tokens purchased by the buyer. 
+       @ param _buyer  buyer address 
+       @ param _amount amount of ether       
+    */
     function buy(address _buyer, uint256 _amount) public {                      
         uint256 _muiAmount = _amount.mul(buyPrice);
         require(availableSupply > 0);
@@ -124,7 +151,10 @@ contract MUIToken is owned,StandardToken {
     }
 
     /* Owner send the amount of ehter proportionalto the number of tokens received to seller'saccount. 
-       The price of token is set depening on existence of bidSupply.  */
+       The price of token is set depening on existence of bidSupply.  
+       @ param _seller seller address
+       @ param _amount amount of mui
+    */
     function sell(address _seller, uint256 _amount) public {                    
         uint256 _price;
         uint256 _etherAmount;
@@ -145,7 +175,11 @@ contract MUIToken is owned,StandardToken {
         Sell(_seller, _amount, _price, _etherAmount);                           
     }
 
-    /* This function is called when user send tokens to other user. */
+    /* This function is called when user send tokens to other user. 
+       @ param _from   src address
+       @ param _to     dst address
+       @ param _amount amount of mui
+    */
     function send(address _from, address _to, uint256 _amount) public {
         require(balances[_from] >= balances[_from].sub(_amount));
         _transfer(_from, _to, _amount);
