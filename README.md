@@ -10,7 +10,7 @@ We have a functional deployment running on ropsten testnet. The deployed contrac
 
 The abi of SovereignNetworkk contract is available at [link](https://github.com/phantomcoco/MUI_Solidity/blob/master/contracts/abi/MUIToken.abi)
 
-## Main functions
+## Functions
 
 We describe the main functions of the MUIToken contract as below.
 
