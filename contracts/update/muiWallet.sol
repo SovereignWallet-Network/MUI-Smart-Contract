@@ -214,7 +214,6 @@ contract muiWallet is Withdrawable,Utils {
 
   function sellMUI(uint256 _muiAmount) public { // seller == msg.sender
       uint256 ethAmount;
-      uint256 contractBalance = muiToken.balanceOf(this);
 
       if (exchangeSupply > 0 && exchangePrice > 0) {
         require(exchangeSupply >= exchangeSupply.sub(_muiAmount));
