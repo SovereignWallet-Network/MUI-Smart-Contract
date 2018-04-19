@@ -1,5 +1,35 @@
 pragma solidity 0.4.19;
 
+library SafeMath {
+
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) {
+      return 0;
+    }
+    uint256 c = a * b;
+    assert(c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+
 interface ERC20 {
     function totalSupply() public view returns (uint supply);
     function balanceOf(address _owner) public view returns (uint balance);
@@ -9,6 +39,13 @@ interface ERC20 {
     function allowance(address _owner, address _spender) public view returns (uint remaining);
     function decimals() public view returns(uint digits);
     event Approval(address indexed _owner, address indexed _spender, uint _value);
+}
+
+contract Utils {
+    ERC20 constant internal ETH_TOKEN_ADDRESS = ERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
+    uint  constant internal MAX_DECIMALS = 18;
+    uint  constant internal ETH_DECIMALS = 18;
+    mapping(address=>uint) internal decimals;
 }
 
 contract PermissionGroups {
@@ -38,20 +75,12 @@ contract PermissionGroups {
       return operatorsGroup;
   }
 
-  /**
-   * @dev Allows the current admin to set the pendingAdmin address.
-   * @param newAdmin The address to transfer ownership to.
-   */
   function transferAdmin(address _newAdmin) public onlyAdmin {
       require(_newAdmin != address(0));
       TransferAdminPending(pendingAdmin);
-      pendingAdmin = newAdmin;
+      pendingAdmin = _newAdmin;
   }
 
-  /**
-   * @dev Allows the current admin to set the admin in one tx. Useful initial deployment.
-   * @param newAdmin The address to transfer ownership to.
-   */
   function transferAdminQuickly(address newAdmin) public onlyAdmin {
       require(newAdmin != address(0));
       TransferAdminPending(newAdmin);
@@ -106,12 +135,12 @@ contract PermissionGroups {
 
 contract Withdrawable is PermissionGroups {
 
-    function withdrawToken(ERC20 _token, uint _amount, address _sendTo) external {
+    function withdrawToken(ERC20 _token, uint _amount, address _sendTo) public {
         require(_token.transfer(_sendTo, _amount));
         TokenWithdraw(_token, _amount, _sendTo);
     }
 
-    function withdrawEther(uint _amount, address _sendTo) external {
+    function withdrawEther(uint _amount, address _sendTo) public {
         _sendTo.transfer(_amount);
         EtherWithdraw(_amount, _sendTo);
     }
@@ -122,10 +151,13 @@ contract Withdrawable is PermissionGroups {
 
 contract muiWallet is Withdrawable,Utils {
 
+  using SafeMath for uint256;
+
   ERC20   public muiToken;
   uint256 public sellPrice;
   uint256 public buyPrice;
   uint256 public exchangePrice;
+  uint256 public exchangeSupply;
   uint256 public availableSupply;
   mapping(address=>bool) public isReserve;
 
@@ -144,17 +176,22 @@ contract muiWallet is Withdrawable,Utils {
   }
 
   function setPrices(uint256 _sellPrice, uint256 _buyPrice) onlyAdmin public {
-          sellPrice = _sellPrice;
-          buyPrice  = _buyPrice;
+      sellPrice = _sellPrice;
+      buyPrice  = _buyPrice;
   }
 
   function setExchangePrice(uint256 _value) onlyAdmin public {
-          exchangePrice = _value;
+      exchangePrice = _value;
   }
 
   function setAvailableSupply(uint256 _value) onlyAdmin public {
-          require (muiToken.balanceOf(admin) >= _value);
-          availableSupply = _value;
+      require (muiToken.balanceOf(this) >= _value);         // mui amount of this smart contract
+      availableSupply = _value;
+  }
+
+  function setExchangeSupply(uint256 _value) onlyAdmin public {
+      require (muiToken.balanceOf(this) >= _value);         // mui amount of this smart contract
+      exchangeSupply = _value;
   }
 
   function getBalance(ERC20 _token, address _user) public view returns(uint) {
@@ -164,18 +201,45 @@ contract muiWallet is Withdrawable,Utils {
           return _token.balanceOf(_user);
   }
 
-  function buyMUI(address _buyer, uint256 _ethAmount) public {
-      uint256 muiAmount = _amount.mul(buyPrice);
+  function buyMUI() payable public { // buyer == msg.spender && ethAmount == msg.value
+      uint256 muiAmount = buyPrice.mul(msg.value);
+
       require(availableSupply > 0);
       require(availableSupply >= availableSupply.sub(muiAmount));
       require(muiToken.balanceOf(this) >= muiAmount);
       availableSupply = availableSupply.sub(muiAmount);
+      withdrawToken(muiToken, muiAmount, msg.sender);
+      Buy(msg.sender, muiAmount);
   }
 
-  function sellMUI(address _seller, uint256 _muiAmount) public {
+  function sellMUI(uint256 _muiAmount) public { // seller == msg.sender
+      uint256 ethAmount;
+      uint256 contractBalance = muiToken.balanceOf(this);
 
+      if (exchangeSupply > 0 && exchangePrice > 0) {
+        require(exchangeSupply >= exchangeSupply.sub(_muiAmount));
+        ethAmount = _muiAmount.div(exchangePrice);
+        require(this.balance >= this.balance.sub(ethAmount)); // ehter amount of this contract
+        withdrawEther(ethAmount, msg.sender);
+        Sell(msg.sender, _muiAmount, exchangePrice, ethAmount);
+        exchangeSupply = exchangeSupply.sub(_muiAmount);
+      } else {
+        ethAmount = _muiAmount.div(sellPrice);
+        require(this.balance >= this.balance.sub(ethAmount));
+        withdrawEther(ethAmount, msg.sender);
+        Sell(msg.sender, _muiAmount, sellPrice, ethAmount);
+        availableSupply = availableSupply.sub(_muiAmount);
+      }
+  }
+
+  function sendMUI(address _to, uint256 _muiAmount) public {  // _from == msg.sender
+      require(muiToken.balanceOf(msg.sender) >= muiToken.balanceOf(msg.sender).sub(_muiAmount));
+      withdrawToken(muiToken, _muiAmount, _to);
+      Send(msg.sender, _to, _muiAmount);
   }
 
   event EtherReceival(address indexed sender, uint amount);
-  // send() // ERC20 의 transfer() function 으로 Token 보내볼 것 (Client)
+  event Buy(address indexed _buyer, uint256 indexed _fund);
+  event Sell(address indexed _seller, uint256 indexed _fund, uint256 indexed _sellPrice, uint256  _etherAmount);   // _etherAmount : ether amount that user should received back
+  event Send(address indexed _from, address indexed _to, uint256 indexed _amount);
 }
