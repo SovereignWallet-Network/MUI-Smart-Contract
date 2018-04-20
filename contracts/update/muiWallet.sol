@@ -159,7 +159,7 @@ contract muiWallet is Withdrawable,Utils {
   uint256 public exchangePrice;
   uint256 public exchangeSupply;
   uint256 public availableSupply;
-  mapping(address=>bool) public isReserve;
+  //mapping(address=>bool) public isReserve; // @TODO : Will be implemented in the future after figuring what the feature of reserve and how it works
 
   function muiWallet(ERC20 _muiToken, address _admin, uint256 _sellPrice, uint256 _buyPrice, uint256 _availableSupply) public {
       require(_admin != address(0));
@@ -171,7 +171,7 @@ contract muiWallet is Withdrawable,Utils {
   }
 
   function() public payable {
-      require(isReserve[msg.sender]);
+      //require(isReserve[msg.sender]);
       EtherReceival(msg.sender, msg.value);
   }
 
