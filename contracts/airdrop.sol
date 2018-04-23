@@ -16,17 +16,25 @@ contract Airdrop is PermissionGroups {
       admin = _admin;
   }
 
-    //app internal
+ function setWalletIncentive(uint256 _value) onlyAdmin public {
+      walletIncentive = _value;
+ }
+
+ function setExternalIncentive(uint256 _value) onlyAdmin public {
+      externalIncentive = _value;
+ }
+
+  //app internal
   function sovereignTransfer() public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      require(muiToken.transfer(msg.sender, walletIncentive)); 
+      require(muiToken.transfer(msg.sender, walletIncentive));
       TokenWithdraw(muiToken, walletIncentive, msg.sender);
   }
-    
-    //airdrop event
+
+  //airdrop event
   function externalTransfer(address _to) onlyAdmin public {
       require (muiToken.balanceOf(this) >= externalIncentive);
-      require(muiToken.transfer(_to, externalIncentive)); 
+      require(muiToken.transfer(_to, externalIncentive));
       TokenWithdraw(muiToken, externalIncentive, _to);
   }
 
