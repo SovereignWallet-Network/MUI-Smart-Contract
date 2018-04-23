@@ -3,14 +3,14 @@ pragma solidity 0.4.19;
 
 import "./ERC20Interface.sol";
 
-contract airdrop {
+contract Airdrop {
 
   ERC20   muiToken;
   address admin;
   uint256 walletIncentive = 10;
   uint256 externalIncentive = 10;
 
-  function airdrop(ERC20 _muiToken, address _admin) public {
+  function Airdrop(ERC20 _muiToken, address _admin) public {
       muiToken = _muiToken;
       admin = _admin;
   }

@@ -7,7 +7,7 @@ import "./EIP20.sol";
 import "./PermissionGroups.sol";
 
 
-contract muiToken is EIP20,PermissionGroups {
+contract MuiToken is EIP20,PermissionGroups {
 
     using SafeMath for uint256;
 
@@ -21,7 +21,7 @@ contract muiToken is EIP20,PermissionGroups {
     uint8   public decimals;
     string  public symbol;
 
-    function muiToken(
+    function MuiToken(
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,
