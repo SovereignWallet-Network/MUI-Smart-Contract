@@ -7,7 +7,6 @@ import "./PermissionGroups.sol";
 contract Airdrop is PermissionGroups {
 
   ERC20   public muiToken;
-  address public admin;
   uint256 public walletIncentive = 10;
   uint256 public externalIncentive = 10;
 
