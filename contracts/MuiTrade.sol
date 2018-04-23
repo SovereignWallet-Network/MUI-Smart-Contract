@@ -61,6 +61,7 @@ contract MuiTrade is Withdrawable,Utils {
   }
 
   function buyMUI() payable public { // buyer == msg.spender && ethAmount == msg.value
+      require(msg.value > 0);
       uint256 muiAmount = buyPrice.mul(msg.value);
 
       require(availableSupply > 0);
@@ -72,6 +73,7 @@ contract MuiTrade is Withdrawable,Utils {
   }
 
   function sellMUI(uint256 _muiAmount) public { // seller == msg.sender
+      require(_muiAmount > 0);
       uint256 ethAmount;
 
       if (exchangeSupply > 0 && exchangePrice > 0) {
