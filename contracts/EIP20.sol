@@ -3,6 +3,7 @@ pragma solidity 0.4.19;
 
 import "./SafeMath.sol";
 import "./EIP20Interface.sol";
+import "./TokenRecipient.sol";
 
 contract EIP20 is EIP20Interface {
 

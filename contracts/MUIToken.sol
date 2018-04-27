@@ -27,7 +27,7 @@ contract MuiToken is EIP20,PermissionGroups {
         uint8 _decimalUnits,
         string _tokenSymbol
     ) public {
-        balances[owner] = _initialAmount;
+        balances[admin] = _initialAmount;
         totalSupply = _initialAmount;
         name = _tokenName;
         decimals = _decimalUnits;
