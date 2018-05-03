@@ -51,7 +51,7 @@ contract MuiTrade is Withdrawable,Utils {
       exchangeSupply = _value;
   }
 
-  function getBalance(ERC20 _token, address _user) public view returns(uint) {
+  function getBalance(ERC20 _token, address _user) public view returns(uint) { //############
       if (_token == ETH_TOKEN_ADDRESS)
           return _user.balance;
       else
