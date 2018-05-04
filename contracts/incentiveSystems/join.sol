@@ -7,8 +7,7 @@ contract join is PermissionGroups {
 
     mapping (address => bool) public joinUsers;
     address[] public usersGroup;                                   
-    address[] public joinAirdropGroup;                                 
-    address[] public joinExpiredGroup;                                 
+    address[] public joinAirdropGroup;                                                                
 
 
     function getJoinUser(address _user) external view returns(bool) {
@@ -34,24 +33,13 @@ contract join is PermissionGroups {
         joinAirdropGroup.push(_user);
     }
 
-    function addJoinExpiredUsers(address _user) public {
-        require(joinUsers[_user] == true);
-
-        JoinExpiredUsersAdded(_user);
-        joinExpiredGroup.push(_user);
-    }
-
     function joinEvent(address _from) {
-        if (joinUsers[_from] == false) {
-            addJoinUsers(_from);                                       
-            addJoinAirdropUsers(_from);                                
-        } else {
-            addJoinExpiredUsers(_from);
-        }
+        require(joinUsers[_from] == false);
+        addJoinUsers(_from);                                       
+        addJoinAirdropUsers(_from);                                
     }
 
     event JoinUsersAdded(address newUser, bool joinCheck);
     event JoinAirdropUsersAdded(address user, bool joinCheck);
-    event JoinExpiredUsersAdded(address expiredUser);
 
 }
