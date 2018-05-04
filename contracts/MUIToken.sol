@@ -7,7 +7,7 @@ import "./EIP20.sol";
 import "./PermissionGroups.sol";
 
 
-contract MuiToken is EIP20,PermissionGroups {
+contract MuiToken is EIP20, PermissionGroups {
 
     using SafeMath for uint256;
 

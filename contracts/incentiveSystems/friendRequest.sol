@@ -64,7 +64,7 @@ contract friendRequest is PermissionGroups {
         }
     }
 
-    function FriendRequestEvent(address _from, address _to) {
+    function friendRequestEvent(address _from, address _to) {
         if(friendRequestUsers[_from] == 0) {
             addFriendRequestUsers(_from);                                       // add user to userlist
             addfriendRequestAirdropUsers(_from);                                // add user to airdrop-userlist
