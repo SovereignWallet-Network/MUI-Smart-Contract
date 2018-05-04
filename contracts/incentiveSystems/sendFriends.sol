@@ -47,13 +47,18 @@ contract sendFriends is PermissionGroups {
     function sendFriendsEvent(address _from, address _to) {
         if (sendFriends[_from] == 0) {
             addSendFriends(_from);
-            addSendFriendsAirdrop(_from);                                                                                
+            addSendFriendsAirdrop(_from);
+            addSendFriends(_to);
+            addSendFriendsAirdrop(_to);                                                                                   
         } else if (sendFriends[_from] < 101) {
             require(sendFriends[_from] > 0);  
-            addSendFriendsAirdrop(_from); 
+            addSendFriendsAirdrop(_from);
+            addSendFriendsAirdrop(_to);    
             sendFriends[_from] += 1;                                                           
+            sendFriends[_to] += 1;
         } else {
             addSendFriendsExpiredUsers(_from);
+            addSendFriendsExpiredUsers(_to);
         }
     }
 

@@ -30,39 +30,39 @@ contract Airdrop is PermissionGroups, friendRequest, join, buyToken, sellToken, 
  }
 
   //app internal
-  function sovereignFriendRequestAirdrop(address _to) onlyAdmin public {
+  function sovereignFriendRequestAirdrop(address _from, address _to) onlyAdmin public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      friendRequestEvent(msg.sender, _to);
-      require(muiToken.transfer(msg.sender, walletIncentive));
-      TokenWithdraw(muiToken, walletIncentive, msg.sender);
+      friendRequestEvent(_from, _to);
+      require(muiToken.transfer(_from, walletIncentive));
+      TokenWithdraw(muiToken, walletIncentive, _from);
   }
 
-  function sovereignJoinAirdrop() onlyAdmin public {
+  function sovereignJoinAirdrop(address _from) onlyAdmin public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      joinEvent(msg.sender);
-      require(muiToken.transfer(msg.sender, walletIncentive));
-      TokenWithdraw(muiToken, walletIncentive, msg.sender);
+      joinEvent(_from);
+      require(muiToken.transfer(_from, walletIncentive));
+      TokenWithdraw(muiToken, walletIncentive, _from);
   }
 
-  function sovereignBuyTokenAirdrop() onlyAdmin public {
+  function sovereignBuyTokenAirdrop(address _from) onlyAdmin public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      buyEvent(msg.sender);
-      require(muiToken.transfer(msg.sender, walletIncentive));
-      TokenWithdraw(muiToken, walletIncentive, msg.sender);
+      buyEvent(_from);
+      require(muiToken.transfer(_from, walletIncentive));
+      TokenWithdraw(muiToken, walletIncentive, _from);
   }
    
-  function sovereignSellTokenAirdrop() onlyAdmin public {
+  function sovereignSellTokenAirdrop(address _from) onlyAdmin public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      sellEvent(msg.sender);
-      require(muiToken.transfer(msg.sender, walletIncentive));
-      TokenWithdraw(muiToken, walletIncentive, msg.sender);
+      sellEvent(_from);
+      require(muiToken.transfer(_from, walletIncentive));
+      TokenWithdraw(muiToken, walletIncentive, _from);
   }
 
-  function sovereignSendFriendsAirdrop(address _to) onlyAdmin public {
+  function sovereignSendFriendsAirdrop(address _from, address _to) onlyAdmin public {
       require (muiToken.balanceOf(this) >= walletIncentive);
-      sendFriendsEvent(msg.sender, _to);
-      require(muiToken.transfer(msg.sender, walletIncentive));
-      TokenWithdraw(muiToken, walletIncentive, msg.sender);
+      sendFriendsEvent(_from, _to);
+      require(muiToken.transfer(_from, walletIncentive));
+      TokenWithdraw(muiToken, walletIncentive, _from);
   }
 
   //airdrop event
