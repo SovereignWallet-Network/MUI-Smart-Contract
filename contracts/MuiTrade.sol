@@ -19,11 +19,10 @@ contract MuiTrade is Withdrawable,Utils {
   uint256 public exchangeSupply;
   uint256 public availableSupply;
 
-  function MuiTrade(ERC20 _muiToken, address _admin, uint256 _sellPrice, uint256 _buyPrice, uint256 _availableSupply) public {
+  function MuiTrade(ERC20 _muiToken, address _admin, uint256 _buyPrice, uint256 _availableSupply) public {
       require(_admin != address(0));
       muiToken = _muiToken;
       admin = _admin;
-      sellPrice = _sellPrice;
       buyPrice = _buyPrice;
       availableSupply = _availableSupply;
   }
@@ -32,8 +31,7 @@ contract MuiTrade is Withdrawable,Utils {
       EtherReceival(msg.sender, msg.value);
   }
 
-  function setPrices(uint256 _sellPrice, uint256 _buyPrice) onlyAdmin public {
-      sellPrice = _sellPrice;
+  function setPrices(uint256 _buyPrice) onlyAdmin public {
       buyPrice  = _buyPrice;
   }
 
@@ -51,12 +49,6 @@ contract MuiTrade is Withdrawable,Utils {
       exchangeSupply = _value;
   }
 
-  function getBalance(ERC20 _token, address _user) public view returns(uint) { //############
-      if (_token == ETH_TOKEN_ADDRESS)
-          return _user.balance;
-      else
-          return _token.balanceOf(_user);
-  }
 
   function buyMUI() payable public { // buyer == msg.spender && ethAmount == msg.value
       require(msg.value > 0);
@@ -70,34 +62,7 @@ contract MuiTrade is Withdrawable,Utils {
       Buy(msg.sender, muiAmount);
   }
 
-  function sellMUI(uint256 _muiAmount) public { // seller == msg.sender
-      require(_muiAmount > 0);
-      uint256 ethAmount;
-
-      if (exchangeSupply > 0 && exchangePrice > 0) {
-        require(exchangeSupply >= exchangeSupply.sub(_muiAmount));
-        ethAmount = _muiAmount.div(exchangePrice);
-        require(this.balance >= this.balance.sub(ethAmount)); // ehter amount of this contract
-        withdrawEther(ethAmount, msg.sender);
-        Sell(msg.sender, _muiAmount, exchangePrice, ethAmount);
-        exchangeSupply = exchangeSupply.sub(_muiAmount);
-      } else {
-        ethAmount = _muiAmount.div(sellPrice);
-        require(this.balance >= this.balance.sub(ethAmount));
-        withdrawEther(ethAmount, msg.sender);
-        Sell(msg.sender, _muiAmount, sellPrice, ethAmount);
-        availableSupply = availableSupply.sub(_muiAmount);
-      }
-  }
-
-  function sendMUI(address _to, uint256 _muiAmount) public {  // _from == msg.sender
-      require(muiToken.balanceOf(msg.sender) >= muiToken.balanceOf(msg.sender).sub(_muiAmount));
-      withdrawToken(muiToken, _muiAmount, _to);
-      Send(msg.sender, _to, _muiAmount);
-  }
 
   event EtherReceival(address indexed sender, uint amount);
   event Buy(address indexed _buyer, uint256 indexed _fund);
-  event Sell(address indexed _seller, uint256 indexed _fund, uint256 indexed _sellPrice, uint256  _etherAmount);   // _etherAmount : ether amount that user should received back
-  event Send(address indexed _from, address indexed _to, uint256 indexed _amount);
 }

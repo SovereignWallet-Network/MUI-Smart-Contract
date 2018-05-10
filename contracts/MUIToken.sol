@@ -5,60 +5,88 @@ import "./SafeMath.sol";
 import "./EIP20Interface.sol";
 import "./EIP20.sol";
 import "./PermissionGroups.sol";
+import "./Owned.sol";
+import "./Withdrawable.sol";
 
-
-contract MuiToken is EIP20, PermissionGroups {
+contract MuiToken is Owned, EIP20, PermissionGroups, Withdrawable {
 
     using SafeMath for uint256;
-
-    function () {
-        /// if ether is sent to this address, send it back.
-        throw;
-    }
-
     /// Public variables of the token
     string  public name;
     uint8   public decimals;
     string  public symbol;
+    uint256 public sellPrice;
+    uint256 public exchangePrice;
+    uint256 public exchangeSupply;
+    uint256 public availableSupply;
 
     function MuiToken(
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,
-        string _tokenSymbol
+        string _tokenSymbol,
+        uint256 _sellPrice,
+        uint256 _availableSupply
     ) public {
-        balances[admin] = _initialAmount;
+        balances[owner] = _initialAmount;
         totalSupply = _initialAmount;
         name = _tokenName;
         decimals = _decimalUnits;
         symbol = _tokenSymbol;
+        sellPrice = _sellPrice;
+        availableSupply = _availableSupply;
     }
 
-    function mintToken(address _target, uint256 _mintedAmount) onlyAdmin public {
-        balances[_target] = balances[_target].add(_mintedAmount);
-        totalSupply = totalSupply.add(_mintedAmount);
-        Transfer(0, this, _mintedAmount);
-        Transfer(this, _target, _mintedAmount);
-    }
+  function () public payable {
+      EtherReceival(msg.sender, msg.value);
+  }
+  
+  function setPrices(uint256 _sellPrice) onlyAdmin public {
+      sellPrice = _sellPrice;
+  }
+  
+  function setExchangePrice(uint256 _value) onlyAdmin public {
+      exchangePrice = _value;
+  }
+  
+  function setAvailableSupply(uint256 _value) onlyAdmin public {
+      require (balanceOf(this) >= _value);         // mui amount of this smart contract
+      availableSupply = _value;
+  }
+  
+  function setExchangeSupply(uint256 _value) onlyAdmin public {
+      require (balanceOf(this) >= _value);         // mui amount of this smart contract
+      exchangeSupply = _value;
+  }
+  
+  function tokenTransfer(uint256 _muiAmount) public {
+        require(balances[msg.sender] >= _muiAmount);
+        balances[msg.sender] = balances[msg.sender].sub(_muiAmount);
+        balances[owner] = balances[owner].add(_muiAmount);
+        Transfer(msg.sender, owner, _muiAmount);
+        sellMUI(_muiAmount);
+  }
+  
+  function sellMUI(uint256 _muiAmount) payable public { // seller == msg.sender
+      uint256 ethAmount;
+      if (exchangeSupply > 0 && exchangePrice > 0) {
+        require(exchangeSupply >= exchangeSupply.sub(_muiAmount));
+        ethAmount = _muiAmount.div(exchangePrice);
+        require(this.balance >= this.balance.sub(ethAmount)); // ehter amount of this contract
+        withdrawEther(ethAmount, msg.sender);
+        Sell(msg.sender, _muiAmount, exchangePrice, ethAmount);
+        exchangeSupply = exchangeSupply.sub(_muiAmount);
+      } else {
+        ethAmount = _muiAmount.div(sellPrice);
+        require(this.balance >= this.balance.sub(ethAmount));
+        withdrawEther(ethAmount, msg.sender);
+        Sell(msg.sender, _muiAmount, sellPrice, ethAmount);
+        availableSupply = availableSupply.sub(_muiAmount);
+      }
+  }
 
-    function burn(uint256 _value) public returns (bool success) {
-        require(balances[msg.sender] >= _value);
-        balances[msg.sender] = balances[msg.sender].sub(_value);
-        totalSupply = totalSupply.sub(_value);
-        Burn(msg.sender, _value);
-        return true;
-    }
-
-    function burnFrom(address _from, uint256 _value) public returns (bool success) {
-        require(balances[_from] >= _value);
-        require(_value <= allowed[_from][msg.sender]);
-        balances[_from] = balances[_from].sub(_value);
-        allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-        totalSupply = totalSupply.sub(_value);
-        Burn(_from, _value);
-        return true;
-    }
 
     event FrozenFunds(address target, bool frozen);
     event Burn(address indexed from, uint256 value);
+    event EtherReceival(address indexed sender, uint amount);
 }
