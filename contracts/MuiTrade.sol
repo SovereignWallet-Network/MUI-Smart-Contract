@@ -8,7 +8,7 @@ import "./PermissionGroups.sol";
 import "./Withdrawable.sol";
 
 
-contract MuiTrade is Withdrawable,Utils {
+contract MUITrade is Withdrawable,Utils {
 
   using SafeMath for uint256;
 
@@ -19,7 +19,7 @@ contract MuiTrade is Withdrawable,Utils {
   uint256 public exchangeSupply;
   uint256 public availableSupply;
 
-  function MuiTrade(ERC20 _muiToken, address _admin, uint256 _buyPrice, uint256 _availableSupply) public {
+  function MUITrade(ERC20 _muiToken, address _admin, uint256 _buyPrice, uint256 _availableSupply) public {
       require(_admin != address(0));
       muiToken = _muiToken;
       admin = _admin;
@@ -49,7 +49,6 @@ contract MuiTrade is Withdrawable,Utils {
       exchangeSupply = _value;
   }
 
-
   function buyMUI() payable public { // buyer == msg.spender && ethAmount == msg.value
       require(msg.value > 0);
       uint256 muiAmount = buyPrice.mul(msg.value);
@@ -61,7 +60,6 @@ contract MuiTrade is Withdrawable,Utils {
       withdrawToken(muiToken, muiAmount, msg.sender);
       Buy(msg.sender, muiAmount);
   }
-
 
   event EtherReceival(address indexed sender, uint amount);
   event Buy(address indexed _buyer, uint256 indexed _fund);

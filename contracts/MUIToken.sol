@@ -3,12 +3,12 @@ pragma solidity 0.4.19;
 
 import "./SafeMath.sol";
 import "./EIP20Interface.sol";
+import "./ERC20Interface.sol";
 import "./EIP20.sol";
 import "./PermissionGroups.sol";
-import "./Owned.sol";
 import "./Withdrawable.sol";
 
-contract MuiToken is Owned, EIP20, PermissionGroups, Withdrawable {
+contract MuiToken is EIP20, PermissionGroups, Withdrawable {
 
     using SafeMath for uint256;
     /// Public variables of the token
@@ -40,33 +40,33 @@ contract MuiToken is Owned, EIP20, PermissionGroups, Withdrawable {
   function () public payable {
       EtherReceival(msg.sender, msg.value);
   }
-  
+
   function setPrices(uint256 _sellPrice) onlyAdmin public {
       sellPrice = _sellPrice;
   }
-  
+
   function setExchangePrice(uint256 _value) onlyAdmin public {
       exchangePrice = _value;
   }
-  
+
   function setAvailableSupply(uint256 _value) onlyAdmin public {
       require (balanceOf(this) >= _value);         // mui amount of this smart contract
       availableSupply = _value;
   }
-  
+
   function setExchangeSupply(uint256 _value) onlyAdmin public {
       require (balanceOf(this) >= _value);         // mui amount of this smart contract
       exchangeSupply = _value;
   }
-  
-  function tokenTransfer(uint256 _muiAmount) public {
+
+  function transferToSell(uint256 _muiAmount) public {
         require(balances[msg.sender] >= _muiAmount);
+        require(sellMUI(_muiAmount));
         balances[msg.sender] = balances[msg.sender].sub(_muiAmount);
         balances[owner] = balances[owner].add(_muiAmount);
         Transfer(msg.sender, owner, _muiAmount);
-        sellMUI(_muiAmount);
   }
-  
+
   function sellMUI(uint256 _muiAmount) payable public { // seller == msg.sender
       uint256 ethAmount;
       if (exchangeSupply > 0 && exchangePrice > 0) {
@@ -85,8 +85,7 @@ contract MuiToken is Owned, EIP20, PermissionGroups, Withdrawable {
       }
   }
 
-
     event FrozenFunds(address target, bool frozen);
-    event Burn(address indexed from, uint256 value);
     event EtherReceival(address indexed sender, uint amount);
+    event Sell(address indexed _seller, uint256 indexed _fund, uint256 indexed _sellPrice, uint256  _etherAmount);   // _etherAmount : ether amount that user should received back
 }
