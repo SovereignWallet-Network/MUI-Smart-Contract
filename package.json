@@ -1,0 +1,28 @@
+{
+  "name": "mui_solidity",
+  "version": "1.0.0",
+  "description": "This repository has the main contracts in SovereignWallet Network platform. The MUIToken contract is the main component in this repository. This repository is for testing purposes only, do not use it for real deployment.",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^2.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phantomcoco/MUI_Solidity.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phantomcoco/MUI_Solidity/issues"
+  },
+  "homepage": "https://github.com/phantomcoco/MUI_Solidity#readme"
+}

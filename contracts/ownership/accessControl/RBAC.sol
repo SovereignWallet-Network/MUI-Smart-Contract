@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.23;
 
 import "./Roles.sol";
 
@@ -15,8 +15,8 @@ contract RBAC {
 
     mapping (string => Roles.Role) private roles;
 
-    event RoleAdded(address addr, string roleName);
-    event RoleRemoved(address addr, string roleName);
+    event RoleAdded(address indexed addr, string roleName);
+    event RoleRemoved(address indexed addr, string roleName);
 
     /**
      * @dev reverts if addr does not have role
@@ -45,7 +45,7 @@ contract RBAC {
      */
     function addRole(address addr, string roleName) internal {
         roles[roleName].add(addr);
-        RoleAdded(addr, roleName);
+        emit RoleAdded(addr, roleName);
     }
 
     /**
@@ -55,7 +55,7 @@ contract RBAC {
      */
     function removeRole(address addr, string roleName) internal {
         roles[roleName].remove(addr);
-        RoleRemoved(addr, roleName);
+        emit RoleRemoved(addr, roleName);
     }
 
     /**

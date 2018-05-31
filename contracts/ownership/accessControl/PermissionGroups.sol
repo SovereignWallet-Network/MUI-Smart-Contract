@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.23;
 
 
 import "./RBAC.sol";
@@ -12,7 +12,7 @@ import "../../utils/PositiveMath.sol";
  * @dev Therefore there should be always one admin, otherwise
  * @dev this contract will fall into uncontrolled state.
  */
-contract PermissonGroups is RBAC {
+contract PermissionGroups is RBAC {
     using PositiveMath for uint256;
 
     string public constant ROLE_ADMIN = "admin";
@@ -44,14 +44,14 @@ contract PermissonGroups is RBAC {
     /**
      * @dev constructor. Sets msg.sender as admin by default
      */
-    function PermissonGroups() public {
+    constructor() public {
         adminSize.increment();
         addRole(msg.sender, ROLE_ADMIN);
     }
 
     /**
      * @dev Adds admin role to an address
-     * @param addr address
+     * @param newAdmin address
      */
     function addAdmin(address newAdmin) public onlyAdmin {
         require(adminSize < MAX_ADMIN_SIZE);
@@ -63,7 +63,7 @@ contract PermissonGroups is RBAC {
 
     /**
      * @dev Removes admin role from an address
-     * @param addr address
+     * @param admin address
      */
     function removeAdmin(address admin) public onlyAdmin {
         // Removing all admins will put 
@@ -91,7 +91,7 @@ contract PermissonGroups is RBAC {
 
     /**
      * @dev Adds operator role to an address
-     * @param addr address
+     * @param newOperator address
      */
     function addOperator(address newOperator) public onlyAdmin {
         require(operatorSize < MAX_OPERATOR_SIZE);
@@ -103,7 +103,7 @@ contract PermissonGroups is RBAC {
 
     /**
      * @dev Removes operator role from an address
-     * @param addr address
+     * @param operator address
      */
     function removeOperator(address operator) public onlyAdmin {
         operatorSize.decrement();

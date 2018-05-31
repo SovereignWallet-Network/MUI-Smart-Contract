@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.23;
 
 import "./PausableToken.sol";
 import "../ownership/Claimable.sol";
@@ -12,19 +12,19 @@ contract MuiToken is PausableToken, BulkTransferable, Claimable {
     // TODO: Set the constants later
     string public constant name = "MuiToken";
     string public constant symbol = "MUI";
-    uint8 public constant decimals = 18;
-    uint256 public constant INITIAL_SUPPLY = 10000 * (10 ** uint256(decimals));
+    uint8 public constant decimals = 15;
+    uint256 public constant INITIAL_SUPPLY = 10 ** uint256(decimals);
 
     /**
      * @dev Constructor function of the contract
      * @dev In the deployment immideately give all the tokens to the supplier
-     * @param supplier address Address of the supplier
+     * param supplier address Address of the supplier
      */
-    function MuiToken(address supplier) public {
+    constructor(address supplier) public {
         totalSupply_ = INITIAL_SUPPLY;
         // Give all the supply to the supplier
         balances[supplier] = INITIAL_SUPPLY;
-        Transfer(0x0, supplier, INITIAL_SUPPLY);
+        emit Transfer(0x0, supplier, INITIAL_SUPPLY);
     }
 
 

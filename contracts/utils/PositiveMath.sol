@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity ^0.4.23;
 
 
 /**
@@ -11,7 +11,7 @@ library PositiveMath {
      */
     function increment(uint256 a) internal pure returns(uint256 b) {
         require(a >= 0);
-        b = a++;
+        b = a + 1;
         assert(b > 0);
         return b;
     }
@@ -21,6 +21,6 @@ library PositiveMath {
      */
     function decrement(uint256 a) internal pure returns(uint256) {
         require(a >= 0);
-        return a == 0 ? 0 : a--;
+        return a == 0 ? 0 : a - 1;
     }
 }
