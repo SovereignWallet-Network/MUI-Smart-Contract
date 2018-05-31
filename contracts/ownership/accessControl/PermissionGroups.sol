@@ -2,7 +2,7 @@ pragma solidity ^0.4.23;
 
 
 import "./RBAC.sol";
-import "../../utils/PositiveMath.sol";
+import "../../utils/SafeMath.sol";
 
 
 /**
@@ -13,7 +13,7 @@ import "../../utils/PositiveMath.sol";
  * @dev this contract will fall into uncontrolled state.
  */
 contract PermissionGroups is RBAC {
-    using PositiveMath for uint256;
+    using SafeMath for uint256;
 
     string public constant ROLE_ADMIN = "admin";
     string public constant ROLE_OPERATOR = "operator";
@@ -45,7 +45,7 @@ contract PermissionGroups is RBAC {
      * @dev constructor. Sets msg.sender as admin by default
      */
     constructor() public {
-        adminSize.increment();
+        adminSize.add(1);
         addRole(msg.sender, ROLE_ADMIN);
     }
 
@@ -57,7 +57,7 @@ contract PermissionGroups is RBAC {
         require(adminSize < MAX_ADMIN_SIZE);
         require(newAdmin != address(0));
 
-        adminSize.increment();
+        adminSize.add(1);
         addRole(newAdmin, ROLE_ADMIN);
     }
 
@@ -70,7 +70,7 @@ contract PermissionGroups is RBAC {
         // the permisson groups in uncontrolled state
         require(adminSize > 1);
         
-        adminSize.decrement();
+        adminSize.sub(1);
         removeRole(admin, ROLE_ADMIN);
     }
 
@@ -78,14 +78,14 @@ contract PermissionGroups is RBAC {
      * @dev Checks whether the address has operator role
      * @param addr address
      */
-    function isAdmin(address addr) external view returns(bool) {
+    function isAdmin(address addr) public view returns(bool) {
         return hasRole(addr, ROLE_ADMIN);
     }
 
     /**
      * @dev Returns size of the admin group
      */
-    function getSizeOfAdmins() external view returns(uint256) {
+    function getSizeOfAdmins() public view returns(uint256) {
         return adminSize;
     }
 
@@ -97,7 +97,7 @@ contract PermissionGroups is RBAC {
         require(operatorSize < MAX_OPERATOR_SIZE);
         require(newOperator != address(0));
 
-        operatorSize.increment();
+        operatorSize.add(1);
         addRole(newOperator, ROLE_OPERATOR);
     }
 
@@ -106,7 +106,7 @@ contract PermissionGroups is RBAC {
      * @param operator address
      */
     function removeOperator(address operator) public onlyAdmin {
-        operatorSize.decrement();
+        operatorSize.sub(1);
         removeRole(operator, ROLE_OPERATOR);
     }
 
@@ -114,14 +114,14 @@ contract PermissionGroups is RBAC {
      * @dev Checks whether the address has operator role
      * @param addr address
      */
-    function isOperator(address addr) external view returns(bool) {
+    function isOperator(address addr) public view returns(bool) {
         return hasRole(addr, ROLE_OPERATOR);
     }
 
     /**
      * @dev Returns size of the operator group
      */
-    function getSizeOfOperators() external view returns(uint256) {
+    function getSizeOfOperators() public view returns(uint256) {
         return operatorSize;
     }
 }

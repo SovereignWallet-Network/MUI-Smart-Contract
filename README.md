@@ -57,3 +57,8 @@ function sellToACB(uint256 _amount) public {}
 
 This functions is called when the client wants to sell the MUI tokens on SovereignWallet market.
 The client is expected to have at least _`_amount`_ of balance of MUI tokens.
+
+## Test
+
+1. Install testing framework by running `npm i -g mocha chai chai-as-promised chai-bignumber`
+2. Run `truffle test` in the project directory.

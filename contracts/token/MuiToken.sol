@@ -8,7 +8,7 @@ import "./BulkTransferable.sol";
  * @title MuiToken
  * @dev SovereignWallet Network token
  */
-contract MuiToken is PausableToken, BulkTransferable, Claimable {
+contract MuiToken is PausableToken, Claimable {
     // TODO: Set the constants later
     string public constant name = "MuiToken";
     string public constant symbol = "MUI";
@@ -17,7 +17,7 @@ contract MuiToken is PausableToken, BulkTransferable, Claimable {
 
     /**
      * @dev Constructor function of the contract
-     * @dev In the deployment immideately give all the tokens to the supplier
+     * @dev In the deployment immediately give all the tokens to the supplier
      * param supplier address Address of the supplier
      */
     constructor(address supplier) public {
@@ -25,14 +25,5 @@ contract MuiToken is PausableToken, BulkTransferable, Claimable {
         // Give all the supply to the supplier
         balances[supplier] = INITIAL_SUPPLY;
         emit Transfer(0x0, supplier, INITIAL_SUPPLY);
-    }
-
-
-    // TODO: Research for an efficient way to handle transfers at once instead of looping through????
-    function bulkTransfer(address[] addrList, uint256[] valueList) external {
-        require(addrList.length == valueList.length);
-        for (uint256 i = 0; i < addrList.length; i++) {
-            super.transfer(addrList[i], valueList[i]);
-        }
     }
 }

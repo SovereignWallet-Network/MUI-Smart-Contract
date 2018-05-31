@@ -5,7 +5,7 @@ import "../token/ERC20.sol";
 
 
 /**
- * @title TokenDestructible
+ * @title Destructible
  * @dev Base contract that can be destroyed by owner 
  * and all funds in the contract including the listed 
  * tokens will be sent to the owner or the address provided.
@@ -43,6 +43,7 @@ contract Destructible is Ownable {
 
     /**
      * @dev Refunds all the listed ERC20 tokens to the provided address
+     * @notice This function continues silently even if `transfer` fails in the loop.
      * @param tokens address[] List of addresses of ERC20 token contracts to refund.
      * @param recipient address Address that the refund to be made
      */
