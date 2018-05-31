@@ -1,0 +1,12 @@
+#build files
+build/
+dist/
+
+#npm modules
+node_modules/
+
+#log files
+*.log
+
+#npm package lock file
+package-lock.json
