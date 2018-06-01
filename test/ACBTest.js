@@ -21,7 +21,7 @@ contract('ACB', () => {
     // change this gas amount accordingly or adjust it by multiplying by some constants
     // Also it may change depending of gas fee!
     let approximateGasFee = new BigNumber('1e16'); // 0.01 ether
-    let admin = this.address;
+    let admin = web3.eth.accounts[0];
     let beneficiary = web3.eth.accounts[1];
     let client = web3.eth.accounts[2];
     let nonAuthorizedAddr = web3.eth.accounts[3];
@@ -88,21 +88,44 @@ contract('ACB', () => {
             // initialTokenSupply (1e9) < sellSupply (1e10)
             await this.acb.setAvailableSupplies(0, sellSupply).should.be.rejected;
         });
+
+        it('should be able to withdraw ether and token', async () => {
+            let tokenAmount = new BigNumber(5000);
+            let etherAmount = Utils.ether(1);
+            let preAdminEtherBalance = await web3.eth.getBalance(admin);
+            let preAdminTokenBalance = await this.token.balanceOf(admin);
+            
+            // Withdraw some ether from ACB
+            await this.acb.withdrawEtherAuthorized(etherAmount, {from: admin}).should.be.fulfilled;
+            // Withdraw some token from ACB
+            await this.acb.withdrawTokenAuthorized(this.token.address, tokenAmount, {from: admin}).should.be.fulfilled;
+
+            let postAdminEtherBalance = await web3.eth.getBalance(admin);
+            let postAdminTokenBalance = await this.token.balanceOf(admin);
+
+            // Compare pre and post balances for both ether and token
+            postAdminEtherBalance.should.be.bignumber.above(preAdminEtherBalance.add(etherAmount).sub(approximateGasFee));
+            postAdminTokenBalance.should.be.bignumber.equal(preAdminTokenBalance.add(tokenAmount));
+        });
     });
 
-    describe('Non-authorized addresses', () => {
-        it('should not able to call admin functions', async () => {
-            let buyPrice = new BigNumber('3e14');   // 0.0003 ether
-            let sellPrice = new BigNumber('33e13'); // 0.00033 ether
+    describe('Non-authorized callee', () => {
+        it('should not be able to call admin functions', async () => {
+            let buyPrice = new BigNumber('3e14');    // 0.0003 ether
+            let sellPrice = new BigNumber('33e13');  // 0.00033 ether
             let buySupply = new BigNumber('1e15');   // 10**15 token
             let sellSupply = new BigNumber('0');     // 0 token
-            let feeRate = new BigNumber('3e13');   // 0.00003 ether
+            let feeRate = new BigNumber('3e13');     // 0.00003 ether
             // Try to set prices
             await this.acb.setPrices(buyPrice, sellPrice, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set fee rate
             await this.acb.setFeeRate(feeRate, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set supplies
             await this.acb.setAvailableSupplies(buySupply, sellSupply, {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to withdraw some ether from ACB
+            await this.acb.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to withdraw some token from ACB
+            await this.acb.withdrawTokenAuthorized(this.token.address, clientToken, {from: nonAuthorizedAddr}).should.be.rejected;
         });
     });
 
@@ -133,7 +156,7 @@ contract('ACB', () => {
         });
 
         it('should be able to buy', async () => {
-            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0);
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
 
             // Buy some tokens from ACB as a client
             await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.fulfilled;
@@ -152,7 +175,7 @@ contract('ACB', () => {
         });
 
         it('should be able to sell', async () => {
-            let purchaseCost = Utils.calculateCost(tokenAmount, buyPrice, 0);
+            let purchaseCost = Utils.calculateCost(tokenAmount, buyPrice, 0, false);
 
             // Allow ACB contract to transfer tokens from client's balance
             await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
@@ -199,7 +222,7 @@ contract('ACB', () => {
         });
 
         it('should not be able to buy if ether sent to ACB is not enough', async () => {
-            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0);
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
             // Buy some tokens from ACB by sending ether which is less than the expected cost
             await this.acb.buyFromACB(tokenAmount, {value: purchaseCost.sub(1), from: client}).should.be.rejected;
 
@@ -209,7 +232,7 @@ contract('ACB', () => {
         });
 
         it('should not be able to buy if the avaible sell supply is not enough', async () => {
-            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0);
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
             // First set available sell supply less than the desired amount of token which will be purchased
             await this.acb.setAvailableSupplies(0, tokenAmount.sub(1)).should.be.fulfilled;
             // Then try to buy that desired amount of token from ACB
@@ -229,7 +252,7 @@ contract('ACB', () => {
             await this.acb.setPrices(0, sellPrice).should.be.fulfilled;
 
             tokenAmount = initialTokenSupply.add(1);   // initialTokenSupply + 1
-            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0);
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
             // Try to buy token from ACB which is more than token balance of ACB contract
             await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.rejected;
 

@@ -12,8 +12,9 @@ contract MuiToken is PausableToken, Claimable {
     // TODO: Set the constants later
     string public constant name = "MuiToken";
     string public constant symbol = "MUI";
-    uint8 public constant decimals = 15;
-    uint256 public constant INITIAL_SUPPLY = 10 ** uint256(decimals);
+    uint8 public constant decimals = 6;
+    uint256 public constant TOKEN_SUPPLY = 1000000000; // 1 billion = 1e9 MUI token
+    uint256 public constant INITIAL_SUPPLY = TOKEN_SUPPLY * (10 ** uint256(decimals));
 
     /**
      * @dev Constructor function of the contract

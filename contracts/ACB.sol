@@ -5,7 +5,6 @@ import "./utils/SafeMath.sol";
 import "./token/Withdrawable.sol";
 import "./token/Depositable.sol";
 import "./lifecycle/Destructible.sol";
-import "./ownership/accessControl/PermissionGroups.sol";
 
 
 /**
@@ -13,8 +12,10 @@ import "./ownership/accessControl/PermissionGroups.sol";
  * @dev Algorithmic Central Bank
  */
  // TODO: Do not keep the funds in this contract address, rather use some other addresses
-contract ACB is Withdrawable, Depositable, Destructible, PermissionGroups {
+contract ACB is Withdrawable, Depositable, Destructible {
     using SafeMath for uint256;
+
+    uint256 public constant FEE_RATE_DENOMINATOR = 10000;
 
     ERC20 public token;
     uint256 public buyPriceACB; // In wei
@@ -133,11 +134,10 @@ contract ACB is Withdrawable, Depositable, Destructible, PermissionGroups {
      * @param isBuy bool Indicates whether the trade is a buy or sell in client's point of view
      * @return Calculated cost
      */
-     // TODO: Need a better representation and calculation for fee/feeRate
      // TODO: Fee should be taken in token when the client sells the token to ACB
     function calculateCost(uint256 tokenAmount, uint256 tokenPrice, uint256 feeRate, bool isBuy) internal pure returns(uint256) {
         uint256 baseCost = tokenAmount.mul(tokenPrice);
-        uint256 feeCost = feeRate > 0 ? baseCost.div(feeRate) : 0;
+        uint256 feeCost = feeRate > 0 ? baseCost.mul(feeRate).div(FEE_RATE_DENOMINATOR) : 0;
 
         return isBuy ? baseCost.add(feeCost) : baseCost.sub(feeCost);
     }
