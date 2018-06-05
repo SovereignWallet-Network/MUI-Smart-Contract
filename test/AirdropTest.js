@@ -55,6 +55,42 @@ contract('Airdrop', () => {
             // Compare the expected value and the value set in advance
             expectedRootHashIncentives.should.equalIgnoreCase(rootHashIncetives);
         });
+
+        it('should be able to withdraw ether and token', async () => {
+            let tokenAmount = new BigNumber(5000);
+            let etherAmount = Utils.ether(1);
+
+            let preAdminEtherBalance = await web3.eth.getBalance(admin);
+            let preAdminTokenBalance = await this.token.balanceOf(admin);
+            
+            // Send some ether to Airdrop contract first
+            await this.airdrop.depositEther({value: etherAmount, from: beneficiary}).should.be.fulfilled; 
+            // Withdraw some ether from Airdrop contrcat
+            await this.airdrop.withdrawEtherAuthorized(etherAmount, {from: admin}).should.be.fulfilled;
+            // Withdraw some token from Airdrop contrcat
+            await this.airdrop.withdrawTokenAuthorized(this.token.address, tokenAmount, {from: admin}).should.be.fulfilled;
+
+            // Get the post balances to compare with pre balances
+            let postAdminEtherBalance = await web3.eth.getBalance(admin);
+            let postAdminTokenBalance = await this.token.balanceOf(admin);
+
+            // Compare pre and post balances for both ether and token
+            postAdminEtherBalance.should.be.bignumber.above(preAdminEtherBalance.add(etherAmount).sub(approximateGasFee));
+            postAdminTokenBalance.should.be.bignumber.equal(preAdminTokenBalance.add(tokenAmount));
+        });
+    });
+
+    describe('Non-authorized callee', () => {
+        it('should not be able to call admin functions', async () => {
+            let tokenAmount = new BigNumber(5000);
+            let rootHashIncetives = this.airdropper.getRootHash();
+            // Try to set the root hash of incentives as a non-authorized callee (who is not admin)
+            await this.airdrop.setIncentives(rootHashIncetives, {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to withdraw some ether from Airdrop contrcat
+            await this.airdrop.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to withdraw some token from irdrop contrcat
+            await this.airdrop.withdrawTokenAuthorized(this.token.address, tokenAmount, {from: nonAuthorizedAddr}).should.be.rejected;
+        });
     });
 
     describe('Airdropped account', () => {
