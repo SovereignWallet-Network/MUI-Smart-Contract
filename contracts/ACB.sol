@@ -5,6 +5,8 @@ import "./utils/SafeMath.sol";
 import "./token/Withdrawable.sol";
 import "./token/Depositable.sol";
 import "./lifecycle/Destructible.sol";
+import "./lifecycle/PhaseBased.sol";
+
 
 
 /**
@@ -12,7 +14,7 @@ import "./lifecycle/Destructible.sol";
  * @dev Algorithmic Central Bank
  */
  // TODO: Do not keep the funds in this contract address, rather use some other addresses
-contract ACB is Withdrawable, Depositable, Destructible {
+contract ACB is Withdrawable, Depositable, Destructible, PhaseBased {
     using SafeMath for uint256;
 
     uint256 public constant FEE_RATE_DENOMINATOR = 10000;
@@ -26,18 +28,39 @@ contract ACB is Withdrawable, Depositable, Destructible {
 
 
     event TokenExchange(address indexed client, uint256 tokenAmount, uint256 atPrice, bool isBuy);
-
-
-    constructor(address _token, uint256 _initialBuyPrice, uint256 _initialSellPrice) public payable {
-        token = ERC20(_token);
-        setPrices(_initialBuyPrice, _initialSellPrice);
-    }
+    
 
     /**
      * @notice Do not accept direct ether receivals
      */
     function() public payable {
         revert();
+    }
+
+
+    /**
+     * @dev Constructor
+     * @notice The contract can be funded with ether at the deployment time.
+     * @notice The supplies must be set after the deployment because the funding
+     * with the token in regard is not supported at the deployment time.
+     * @notice Also fee rate can be set after the deployment too.
+     * @param tokenAddress address Address of ERC20 compliant token to be traded
+     * @param initialBuyPrice uint256 Initial buy price of ACB for the intended token
+     * @param initialSellPrice uint256 Initial sell price of ACB for the intended token
+     * @param startTime uint256 Start time of the initial trading phase
+     * @param endTime uint256 End time of the initial trading phase
+     */
+    constructor(
+        address tokenAddress, 
+        uint256 initialBuyPrice, 
+        uint256 initialSellPrice, 
+        uint256 startTime, 
+        uint256 endTime) 
+        public payable 
+    {
+        token = ERC20(tokenAddress);
+        setPrices(initialBuyPrice, initialSellPrice);
+        setPhasePeriod(startTime, endTime);
     }
 
     /**
@@ -48,6 +71,11 @@ contract ACB is Withdrawable, Depositable, Destructible {
     function setPrices(uint256 _buyPriceACB, uint256 _sellPriceACB) public onlyAdmin {
         if (_buyPriceACB > 0) {
             buyPriceACB = _buyPriceACB;
+
+            // Set buySupply too if the buyPrice changes, because depending on the price
+            // the contract may not afford to buy all the previous amount of buy supply.
+            uint256 newBuySupply = address(this).balance.div(buyPriceACB);
+            setSupplies(newBuySupply < buySupplyACB ? newBuySupply : buySupplyACB, sellSupplyACB);
         }
 
         if (_sellPriceACB > 0) {
@@ -57,10 +85,10 @@ contract ACB is Withdrawable, Depositable, Destructible {
 
     /**
      * @dev Sets fee rate for ACB services
-     * @param _feeRate uint256 Desired rate of fee
+     * @param feeRate uint256 Desired rate of fee
      */
-    function setFeeRate(uint256 _feeRate) public onlyAdmin {
-        feeRateACB = _feeRate;
+    function setFeeRate(uint256 feeRate) public onlyAdmin {
+        feeRateACB = feeRate;
     }
 
     /**
@@ -70,9 +98,12 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param _sellSupplyACB uint256 Available token supply that ACB can sell
      */
     function setAvailableSupplies(uint256 _buySupplyACB, uint256 _sellSupplyACB) public onlyAdmin {
+        // Sell supply shouldn't be more than available token balance of this contract
         require(token.balanceOf(this) >= _sellSupplyACB);
-        sellSupplyACB = _sellSupplyACB;
-        buySupplyACB = _buySupplyACB;
+        // Buy supply shouldn't be more than (ether balance / buyPrice) in order to afford to buy
+        require(address(this).balance.div(buyPriceACB) >= _buySupplyACB);
+
+        setSupplies(_buySupplyACB, _sellSupplyACB);
     }
 
     /**
@@ -85,7 +116,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @notice this design may change in future updates
      * @param tokenAmount uint256 Amount of token to be sold to the buyer
      */
-    function buyFromACB(uint256 tokenAmount) external payable {
+    function buyFromACB(uint256 tokenAmount) external payable whenPhaseActive(sellSupplyACB.add(buySupplyACB)) {
         require(tokenAmount > 0);
         require(sellSupplyACB >= tokenAmount);
 
@@ -109,7 +140,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @dev Client sells (msg.sender) token to ACB
      * @param tokenAmount uint256 Amount of the token that ACB buys from the seller
      */
-    function sellToACB(uint256 tokenAmount) external {
+    function sellToACB(uint256 tokenAmount) external whenPhaseActive(sellSupplyACB.add(buySupplyACB)) {
         require(tokenAmount > 0);
         require(buySupplyACB >= tokenAmount);
 
@@ -124,6 +155,11 @@ contract ACB is Withdrawable, Depositable, Destructible {
         withdrawEther(msg.sender, weiAmount);
 
         emit TokenExchange(msg.sender, tokenAmount, buyPriceACB, false);
+    }
+
+    function setSupplies(uint256 _buySupplyACB, uint256 _sellSupplyACB) internal {
+        sellSupplyACB = _sellSupplyACB;
+        buySupplyACB = _buySupplyACB;
     }
 
     /**

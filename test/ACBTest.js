@@ -7,30 +7,49 @@ let should = require('chai')
     .use(require('chai-bignumber')(BigNumber))
     .should();
 
-let ACB = artifacts.require("ACB");
+let ACB = artifacts.require("MockACB");
 let MuiToken = artifacts.require("MuiToken");
 
 contract('ACB', () => {
     let initialEtherBalance = Utils.ether(2);
-    let initialTokenPrice = new BigNumber(1);
+    let initialTokenPrice = new BigNumber('16e13'); // ~1/6000 ether
     let initialTokenSupply = new BigNumber('1e9');
+    let initialPhaseStartTime;
+    let initialPhaseEndTime;
     let clientToken = new BigNumber(10000);
     // Notice that this approximation does not neccessarily mean that it is correct.
     // Therefore do not rely on this approximation all the time
     // If there needs fine tuning to check/compare ether balances before and after transactions,
     // change this gas amount accordingly or adjust it by multiplying by some constants
     // Also it may change depending of gas fee!
-    let approximateGasFee = new BigNumber('1e16'); // 0.01 ether
+    let approximateGasFee = new BigNumber('2e16'); // 0.02 ether
     let admin = web3.eth.accounts[0];
     let beneficiary = web3.eth.accounts[1];
     let client = web3.eth.accounts[2];
     let nonAuthorizedAddr = web3.eth.accounts[3];
 
+
     beforeEach(async () => {
         // Deploy MUI Token contract
         this.token = await MuiToken.new(beneficiary);
+
+        // Set start and end time for initial phase
+        initialPhaseStartTime = new BigNumber(Date.now() / 1000 + 10); // now + 10 seconds
+        initialPhaseEndTime = initialPhaseStartTime.add(60 * 10); // initialPhaseStartTime + 10 minutes
+
         // Deploy Algorithmic Central Bank contract and fund some ether
-        this.acb = await ACB.new(this.token.address, initialTokenPrice, initialTokenPrice, {value: initialEtherBalance});
+        this.acb = await ACB.new(
+            this.token.address, 
+            initialTokenPrice, 
+            initialTokenPrice, 
+            initialPhaseStartTime, 
+            initialPhaseEndTime, 
+            {value: initialEtherBalance}
+        );
+
+        // Rewind the start time by 100 seconds so that the trading phase has been started already
+        await this.acb.moveTimeBeyondPhaseStart(100);
+
         // Fund the ACB contract with MUI token
         await this.token.transfer(this.acb.address, initialTokenSupply, {from: beneficiary});
         // Fund the client with some MUI token
@@ -70,7 +89,7 @@ contract('ACB', () => {
         });
 
         it('should be able to set available supplies', async () => {
-            let buySupply = new BigNumber('1e15');   // 10**15 token
+            let buySupply = new BigNumber('12000');   // 12000 token <= (ether balance of ACB / buyPriceACB) (2ether / 1/6000ether)
             let sellSupply = new BigNumber('0');     // 0 token
             // Set supplies
             await this.acb.setAvailableSupplies(buySupply, sellSupply).should.be.fulfilled;
@@ -80,6 +99,20 @@ contract('ACB', () => {
             // Compare the supplies returned back from the contract and the supplies set to contract
             expectedBuySupply.should.be.bignumber.equal(buySupply);
             expectedSellSupply.should.be.bignumber.equal(sellSupply);
+        });
+
+        it('should be able to set phase period', async () => {
+            let startTime = new BigNumber(Date.now() / 1000 + 60 * 60); // now + 1 hour
+            let endTime = startTime.add(30 * 24 * 60 * 60); // startTime + 30 days
+            // Set phase period
+            await this.acb.setPhasePeriod(startTime, endTime).should.be.fulfilled;
+        });
+
+        it('should not be able to set phase period in a condition that the start time is later than end time', async () => {
+            let endTime = new BigNumber(Date.now() / 1000 + 60 * 60); // now + 1 hour
+            let startTime = endTime.add(30 * 24 * 60 * 60); // endTime + 30 days
+            // Try to set phase period
+            await this.acb.setPhasePeriod(startTime, endTime).should.be.rejected;
         });
 
         it('should not be able to set sell supply to an amount greater than token balance of this contract', async () => {
@@ -116,12 +149,16 @@ contract('ACB', () => {
             let buySupply = new BigNumber('1e15');   // 10**15 token
             let sellSupply = new BigNumber('0');     // 0 token
             let feeRate = new BigNumber('3e13');     // 0.00003 ether
+            let startTime = new BigNumber(Date.now() / 1000 + 60 * 60); // now + 1 hour
+            let endTime = startTime.add(30 * 24 * 60 * 60); // startTime + 30 days
             // Try to set prices
             await this.acb.setPrices(buyPrice, sellPrice, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set fee rate
             await this.acb.setFeeRate(feeRate, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set supplies
             await this.acb.setAvailableSupplies(buySupply, sellSupply, {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to set phase period
+            await this.acb.setPhasePeriod(startTime, endTime, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some ether from ACB
             await this.acb.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some token from ACB
@@ -131,9 +168,10 @@ contract('ACB', () => {
 
     // TODO: Add tests for trades which include fee > 0
     describe('Successful trades', () => {
-        let tokenAmount = new BigNumber('5e3');   // 5000 token
-        let buyPrice = new BigNumber('3e14');     // 0.0003 ether
-        let sellPrice = new BigNumber('33e13');   // 0.00033 ether
+        let tokenAmount = new BigNumber('5e3');     // 5000 token
+        let buyPrice = new BigNumber('12e13');      // 0.00012 ether
+        let sellPrice = new BigNumber('15e13');     // 0.00015 ether
+        let buySupply = new BigNumber('15000');     // 15000 token <= (ether balance of ACB / buyPriceACB) (2ether / 0.00012ether)
         let preClientTokenBalance;
         let preClientEtherBalance;
         let preACBTokenBalance;
@@ -146,7 +184,7 @@ contract('ACB', () => {
         beforeEach(async () => {
             // Set prices and supplies before any trade
             await this.acb.setPrices(buyPrice, sellPrice).should.be.fulfilled;
-            await this.acb.setAvailableSupplies(initialTokenSupply, initialTokenSupply).should.be.fulfilled;
+            await this.acb.setAvailableSupplies(buySupply, initialTokenSupply).should.be.fulfilled;
 
             // Get token and ether balances of both the client and ACB contract before any trade
             preClientTokenBalance = await this.token.balanceOf(client);
@@ -160,7 +198,7 @@ contract('ACB', () => {
 
             // Buy some tokens from ACB as a client
             await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.fulfilled;
-
+            
             // Get token and ether balances of both the client and ACB contract after the trade
             postClientTokenBalance = await this.token.balanceOf(client);
             postClientEtherBalance = await web3.eth.getBalance(client);
@@ -179,7 +217,7 @@ contract('ACB', () => {
 
             // Allow ACB contract to transfer tokens from client's balance
             await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
-            // Buy some tokens from ACB with as a client 
+            // Sell some tokens to ACB with as a client 
             await this.acb.sellToACB(tokenAmount, {from: client}).should.be.fulfilled;
 
             // Get token and ether balances of both the client and ACB contract after the trade
@@ -197,13 +235,17 @@ contract('ACB', () => {
     });
 
     describe('Failed trades', () => {
-        let tokenAmount = new BigNumber('5e3');   // 5000 token
-        let buyPrice = new BigNumber('3e14');     // 0.0003 ether
-        let sellPrice = new BigNumber('33e13');   // 0.00033 ether
+        // DO NOT MODIFY THESE VARIABLES INSIDE THE TEST SUITES
+        let tokenAmount = new BigNumber('5e3');     // 5000 token
+        let buyPrice = new BigNumber('12e13');      // 0.00012 ether
+        let sellPrice = new BigNumber('15e13');     // 0.00015 ether
+        let buySupply = new BigNumber('15000');     // 15000 token <= (ether balance of ACB / buyPriceACB) (2ether / 0.00012ether)
         let preClientTokenBalance;
         let preClientEtherBalance;
         let preACBTokenBalance;
         let preACBEtherBalance;
+
+        // BEFORE USING THESE VARIABLES, UPDATE THEIR VALUES IN THE RELATED TEST SUITE
         let postClientTokenBalance;
         let postClientEtherBalance;
         let postACBTokenBalance;
@@ -212,13 +254,26 @@ contract('ACB', () => {
         beforeEach(async () => {
             // Set prices and supplies before any trade
             await this.acb.setPrices(buyPrice, sellPrice).should.be.fulfilled;
-            await this.acb.setAvailableSupplies(initialTokenSupply, initialTokenSupply).should.be.fulfilled;
+            await this.acb.setAvailableSupplies(buySupply, initialTokenSupply).should.be.fulfilled;
 
             // Get token and ether balances of both the client and ACB contract before any trade
             preClientTokenBalance = await this.token.balanceOf(client);
             preClientEtherBalance = await web3.eth.getBalance(client);
             preACBTokenBalance = await this.token.balanceOf(this.acb.address);
             preACBEtherBalance = await web3.eth.getBalance(this.acb.address);
+        });
+
+        it('should not be able to buy or sell if the trading phase expired', async () => {
+            // Rewind the trading phase to past so that it expires
+            this.acb.moveTimeBeyondPhaseEnd(100).should.be.fulfilled; // by 100 seconds
+
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
+            // Try to buy some tokens from ACB by sending ether which is less than the expected cost
+            await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.rejected;
+            // Allow ACB contract to transfer tokens from client's balance
+            await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
+            // Try to sell some tokens to ACB with as a client 
+            await this.acb.sellToACB(tokenAmount, {from: client}).should.be.rejected;
         });
 
         it('should not be able to buy if ether sent to ACB is not enough', async () => {
@@ -244,17 +299,17 @@ contract('ACB', () => {
         });
 
         it('should not be able to buy if token balance of ACB is not enough', async () => {
-            // First set the sell price something low so that client account can afford to buy
+            // First set the sell price to something low so that client account can afford to buy
             // token as amount of initialTokenSupply. Because ACB was funded in the deployment
             // with token as amount of initialTokenSupply and we cannot call `transfer()` function
             // with callee of ACB's address to reduce to token balance.
-            sellPrice = new BigNumber('1e8');
-            await this.acb.setPrices(0, sellPrice).should.be.fulfilled;
+            // sellPriceACB = 1e8 wei, buyPriceACB = 1 wei
+            await this.acb.setPrices(1, new BigNumber('1e8')).should.be.fulfilled;
 
-            tokenAmount = initialTokenSupply.add(1);   // initialTokenSupply + 1
-            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
+            // tokenAmount = initialTokenSupply + 1
+            let purchaseCost = Utils.calculateCost(initialTokenSupply.add(1), sellPrice, 0, true);
             // Try to buy token from ACB which is more than token balance of ACB contract
-            await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.rejected;
+            await this.acb.buyFromACB(initialTokenSupply.add(1), {value: purchaseCost, from: client}).should.be.rejected;
 
             // Check post ether balance of client whether she/he has lost ether or not
             postClientEtherBalance = await web3.eth.getBalance(client);
@@ -264,8 +319,8 @@ contract('ACB', () => {
         it('should not be able to sell if ether balance of ACB is not enough', async () => {
             // First set buy first to a higher value so that the amount of token to be sold
             // values more than ether balance of ACB. i.e. initialEtherBalance < buyPrice * tokenAmount
-            buyPrice = Utils.ether(1);     // 1 ether
-            await this.acb.setPrices(buyPrice, sellPrice).should.be.fulfilled;
+            // buyPriceACB = 1 ether
+            await this.acb.setPrices(Utils.ether(1), sellPrice).should.be.fulfilled;
             // Allow ACB contract to transfer tokens from client's balance
             await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
             // Buy some tokens from ACB with as a client 
@@ -292,12 +347,11 @@ contract('ACB', () => {
 
         it('should not be able to sell if token balance of client is not enough', async () => {
             // Set the amount of token to be sold to a number more than client's token balance
-            tokenAmount = clientToken.add(1); // clientToken + 1
-
+            // tokenAmount = clientToken + 1
             // Allow ACB contract to transfer tokens from client's balance
-            await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
+            await this.token.approve(this.acb.address, clientToken.add(1), {from: client}).should.be.fulfilled;
             // Buy some tokens from ACB with as a client 
-            await this.acb.sellToACB(tokenAmount, {from: client}).should.be.rejected;
+            await this.acb.sellToACB(clientToken.add(1), {from: client}).should.be.rejected;
 
             // Check post token balance of client whether she/he has lost token or not
             postClientTokenBalance = await this.token.balanceOf(client);
