@@ -133,7 +133,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @dev Client sells (msg.sender) token to ACB
      * @param tokenAmount uint256 Amount of the token that ACB buys from the seller
      */
-    function sellToACB(uint256 tokenAmount) public {
+    function sellToACB(uint256 tokenAmount) public onlyWhiteListed {
         require(tokenAmount > 0);
         require(buySupplyACB >= tokenAmount);
 
@@ -155,7 +155,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param _buySupplyACB uint256 Available token supply that ACB can buy
      * @param _sellSupplyACB uint256 Available token supply that ACB can sell
      */
-    function setSupplies(uint256 _buySupplyACB, uint256 _sellSupplyACB) internal {
+    function setSupplies(uint256 _buySupplyACB, uint256 _sellSupplyACB) internal onlyWhiteListed {
         sellSupplyACB = _sellSupplyACB;
         buySupplyACB = _buySupplyACB;
     }

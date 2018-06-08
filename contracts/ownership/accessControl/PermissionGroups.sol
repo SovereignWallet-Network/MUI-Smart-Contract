@@ -17,6 +17,7 @@ contract PermissionGroups is RBAC {
 
     string public constant ROLE_ADMIN = "admin";
     string public constant ROLE_OPERATOR = "operator";
+    string public constant ROLE_BLACK_LISTED = "blacklisted";
     uint256 private constant MAX_ADMIN_SIZE = 5;
     uint256 private constant MAX_OPERATOR_SIZE = 50;
 
@@ -38,6 +39,15 @@ contract PermissionGroups is RBAC {
      */
     modifier onlyOperator() {
         checkRole(msg.sender, ROLE_OPERATOR);
+        _;
+    }
+
+    /**
+     * @dev modifier to scope denial for blacklisted addresses
+     * // reverts
+     */
+    modifier onlyWhiteListed() {
+        require(!hasRole(msg.sender, ROLE_BLACK_LISTED));
         _;
     }
 
@@ -123,5 +133,30 @@ contract PermissionGroups is RBAC {
      */
     function getSizeOfOperators() public view returns(uint256) {
         return operatorSize;
+    }
+
+    /**
+     * @dev Adds blacklisted role to an address
+     * @param blackListed address
+     */
+    function addToBlackList(address blackListed) public onlyAdmin {
+        require(blackListed != address(0));
+        addRole(blackListed, ROLE_BLACK_LISTED);
+    }
+
+    /**
+     * @dev Removes blacklisted role from an address
+     * @param blackListed address
+     */
+    function removeFromBlackList(address blackListed) public onlyAdmin {
+        removeRole(blackListed, ROLE_BLACK_LISTED);
+    }
+
+    /**
+     * @dev Checks whether the address has blacklisted role
+     * @param addr address
+     */
+    function isBlackListed(address addr) public view returns(bool) {
+        return hasRole(addr, ROLE_BLACK_LISTED);
     }
 }
