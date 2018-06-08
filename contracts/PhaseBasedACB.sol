@@ -48,7 +48,7 @@ contract PhaseBasedACB is ACB {
     /**
      * @dev Checks whether the current phase is active or not
      */
-    function isPhaseActive() public view onlyAdmin returns (bool) {
+    function isPhaseActive() public view returns (bool) {
         return phaseStartTime < now 
             && phaseEndTime > now 
             && sellSupplyACB.add(buySupplyACB) > 0;

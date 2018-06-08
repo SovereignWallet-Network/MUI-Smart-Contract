@@ -24,6 +24,7 @@ contract('ACB', () => {
     // Also it may change depending of gas fee!
     let approximateGasFee = new BigNumber('2e16'); // 0.02 ether
     let admin = web3.eth.accounts[0];
+    let owner = web3.eth.accounts[0];
     let beneficiary = web3.eth.accounts[1];
     let client = web3.eth.accounts[2];
     let nonAuthorizedAddr = web3.eth.accounts[3];
@@ -142,7 +143,61 @@ contract('ACB', () => {
         });
     });
 
+    describe('Owner', () => {
+        let preEtherBalanceRecipient, preTokenBalanceRecipient;
+        let postEtherBalanceRecipient, postTokenBalanceRecipient;
+        let tokenBalanceACB, etherBalanceACB;
+
+        beforeEach(async () => {
+            // Get ACB's balances before any transaction
+            tokenBalanceACB = await this.token.balanceOf(this.acb.address);
+            etherBalanceACB = await web3.eth.getBalance(this.acb.address);
+        });
+
+        it('should be able to destroy the contract', async () => {
+            // Get owner's balances before any transaction
+            preTokenBalanceRecipient = await this.token.balanceOf(owner);
+            preEtherBalanceRecipient = await web3.eth.getBalance(owner);
+            // Destroy the contract
+            await this.acb.destroy([this.token.address], {from: owner}).should.be.fulfilled;
+            // Get balances after destroy action
+            postTokenBalanceRecipient = await this.token.balanceOf(owner);
+            postEtherBalanceRecipient = await web3.eth.getBalance(owner);
+            // Compare pre and post balances
+            postTokenBalanceRecipient.should.be.bignumber.equal(preTokenBalanceRecipient.add(tokenBalanceACB));
+            postEtherBalanceRecipient.should.be.bignumber.above(preEtherBalanceRecipient.add(etherBalanceACB).sub(approximateGasFee));
+
+            // There should be no contract after destroy action.
+            // Make a random call to the contract to check
+            await this.acb.buyPriceACB().should.be.rejected;
+        });
+
+        it('should be able to destroy the contract and withdraw all balances', async () => {
+            // Get recipient's balances before any transaction
+            preTokenBalanceRecipient = await this.token.balanceOf(client);
+            preEtherBalanceRecipient = await web3.eth.getBalance(client);
+            // Destroy the contract
+            await this.acb.destroyAndSend([this.token.address], client, {from: owner}).should.be.fulfilled;
+            // Get balances after destroy action
+            postTokenBalanceRecipient = await this.token.balanceOf(client);
+            postEtherBalanceRecipient = await web3.eth.getBalance(client);
+            // Compare pre and post balances
+            postTokenBalanceRecipient.should.be.bignumber.equal(preTokenBalanceRecipient.add(tokenBalanceACB));
+            postEtherBalanceRecipient.should.be.bignumber.above(preEtherBalanceRecipient.add(etherBalanceACB).sub(approximateGasFee));
+
+            // There should be no contract after destroy action.
+            // Make a random call to the contract to check
+            await this.acb.buyPriceACB().should.be.rejected;
+        });
+    });
+
     describe('Non-authorized callee', () => {
+        it('should be not able to destroy the contract', async () => {
+            // Try to destroy ACB contract
+            await this.acb.destroy([this.token.address], {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.acb.destroyAndSend([this.token.address], client, {from: nonAuthorizedAddr}).should.be.rejected;
+        });
+
         it('should not be able to call admin functions', async () => {
             let buyPrice = new BigNumber('3e14');    // 0.0003 ether
             let sellPrice = new BigNumber('33e13');  // 0.00033 ether
@@ -185,6 +240,10 @@ contract('ACB', () => {
             // Set prices and supplies before any trade
             await this.acb.setPrices(buyPrice, sellPrice).should.be.fulfilled;
             await this.acb.setAvailableSupplies(buySupply, initialTokenSupply).should.be.fulfilled;
+
+            // Check that the trading phase is active
+            let isPhaseActive = await this.acb.isPhaseActive();
+            isPhaseActive.should.be.true;
 
             // Get token and ether balances of both the client and ACB contract before any trade
             preClientTokenBalance = await this.token.balanceOf(client);
@@ -266,6 +325,10 @@ contract('ACB', () => {
         it('should not be able to buy or sell if the trading phase expired', async () => {
             // Rewind the trading phase to past so that it expires
             this.acb.moveTimeBeyondPhaseEnd(100).should.be.fulfilled; // by 100 seconds
+
+            // Check that the trading phase is not active
+            let isPhaseActive = await this.acb.isPhaseActive().should.be.fulfilled;
+            isPhaseActive.should.be.false;
 
             let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
             // Try to buy some tokens from ACB by sending ether which is less than the expected cost
