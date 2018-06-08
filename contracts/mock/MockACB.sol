@@ -1,13 +1,13 @@
 pragma solidity ^0.4.23;
 
-import "../ACB.sol";
+import "../PhaseBasedACB.sol";
 
 
 /**
  * @title MockACB
  * @dev A contract to mock Algorithmic Central Bank (for tests)
  */
-contract MockACB is ACB {
+contract MockACB is PhaseBasedACB {
 
     constructor(
         address tokenAddress, 
@@ -15,7 +15,7 @@ contract MockACB is ACB {
         uint256 initialSellPrice, 
         uint256 startTime, 
         uint256 endTime) 
-        public payable ACB(tokenAddress, initialBuyPrice, initialSellPrice, startTime, endTime)
+        public payable PhaseBasedACB(tokenAddress, initialBuyPrice, initialSellPrice, startTime, endTime)
     {}
 
     function moveTimeBeyondPhaseStart(uint256 _seconds) public {
