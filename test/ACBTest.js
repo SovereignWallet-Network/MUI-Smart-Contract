@@ -191,8 +191,8 @@ contract('ACB', () => {
         });
     });
 
-    describe('Non-authorized callee', () => {
-        it('should be not able to destroy the contract', async () => {
+    describe('Non-authorized (without admin & owner permissons) callee', () => {
+        it('should not be able to destroy the contract', async () => {
             // Try to destroy ACB contract
             await this.acb.destroy([this.token.address], {from: nonAuthorizedAddr}).should.be.rejected;
             await this.acb.destroyAndSend([this.token.address], client, {from: nonAuthorizedAddr}).should.be.rejected;
@@ -322,6 +322,22 @@ contract('ACB', () => {
             preACBEtherBalance = await web3.eth.getBalance(this.acb.address);
         });
 
+        it('should not be able to buy or sell if the sender is blacklisted', async () => {
+            // Add the client to blacklist
+            await this.acb.addToBlackList(client).should.be.fulfilled;
+            // And check if it is added
+            let isBlacklisted = await this.acb.isBlackListed(client);
+            isBlacklisted.should.be.true;
+
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
+            // Try to buy some tokens from ACB by sending ether which is less than the expected cost
+            await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.rejected;
+            // Allow ACB contract to transfer tokens from client's balance
+            await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
+            // Try to sell some tokens to ACB with as a client 
+            await this.acb.sellToACB(tokenAmount, {from: client}).should.be.rejected;
+        });
+
         it('should not be able to buy or sell if the trading phase expired', async () => {
             // Rewind the trading phase to past so that it expires
             this.acb.moveTimeBeyondPhaseEnd(100).should.be.fulfilled; // by 100 seconds
@@ -419,6 +435,84 @@ contract('ACB', () => {
             // Check post token balance of client whether she/he has lost token or not
             postClientTokenBalance = await this.token.balanceOf(client);
             postClientTokenBalance.should.be.bignumber.equal(preClientTokenBalance);
+        });
+    });
+
+    describe('PermissionGroups', () => {
+        it('should be able to add the defined roles to an address', async () => {
+            // Add admin role to the client and check if s/he is granted the role
+            await this.acb.addAdmin(client).should.be.fulfilled;
+            let isAdmin = await this.acb.isAdmin(client);
+            isAdmin.should.be.true;
+            // Add operator role to the client and check if s/he is granted the role
+            await this.acb.addOperator(client).should.be.fulfilled;
+            let isOperator = await this.acb.isOperator(client);
+            isOperator.should.be.true;
+            // Add the client to the blacklist and check if s/he is blacklisted
+            await this.acb.addToBlackList(client).should.be.fulfilled;
+            let isBlacklisted = await this.acb.isBlackListed(client);
+            isBlacklisted.should.be.true;
+        });
+
+        it('should be able to remove the defined roles from an address', async () => {
+            // Add roles first
+            await this.acb.addAdmin(client).should.be.fulfilled;
+            await this.acb.addOperator(client).should.be.fulfilled;
+            await this.acb.addToBlackList(client).should.be.fulfilled;
+
+            // And then try to remove the roles
+            await this.acb.removeAdmin(client).should.be.fulfilled;
+            await this.acb.removeOperator(client).should.be.fulfilled;
+            await this.acb.removeFromBlackList(client).should.be.fulfilled;
+
+            // Check if the address still has the roles
+            let isAdmin = await this.acb.isAdmin(client);
+            isAdmin.should.be.false;
+            let isOperator = await this.acb.isOperator(client);
+            isOperator.should.be.false;
+            let isBlacklisted = await this.acb.isBlackListed(client);
+            isBlacklisted.should.be.false;
+        });
+
+        it('should not be able to add a role to the same account more than once', async () => {
+            // Add roles first
+            await this.acb.addAdmin(client).should.be.fulfilled;
+            await this.acb.addOperator(client).should.be.fulfilled;
+
+            // Add roles twice
+            await this.acb.addAdmin(client).should.be.rejected;
+            await this.acb.addOperator(client).should.be.rejected;
+        });
+
+        it('should not be able to add admin role more than the maximum size', async () => {
+            // Add 4 admins (the contract creator is the 5th one which is account[0])
+            await this.acb.addAdmin(web3.eth.accounts[1]).should.be.fulfilled;
+            await this.acb.addAdmin(web3.eth.accounts[2]).should.be.fulfilled;
+            await this.acb.addAdmin(web3.eth.accounts[3]).should.be.fulfilled;
+            await this.acb.addAdmin(web3.eth.accounts[4]).should.be.fulfilled;
+            // Try to add one more admin which is out of size of adminSize which is 5
+            await this.acb.addAdmin(web3.eth.accounts[5]).should.be.rejected;
+        });
+
+        it('should not be able to remove the last admin role', async () => {
+            // Try to remove the last admin
+            await this.acb.removeAdmin(admin).should.be.rejected;
+        });
+
+        it('should not be able to add or remove a role if the sender is not an admin', async () => {
+            // First add roles to an address
+            await this.acb.addAdmin(client).should.be.fulfilled;
+            await this.acb.addOperator(client).should.be.fulfilled;
+            await this.acb.addToBlackList(client).should.be.fulfilled;
+
+            // Try to add more roles as a non-authorized address
+            await this.acb.addAdmin(web3.eth.accounts[4], {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.acb.addOperator(web3.eth.accounts[4], {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.acb.addToBlackList(web3.eth.accounts[4], {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to remove roles as a non-authorized address
+            await this.acb.removeAdmin(client, {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.acb.removeOperator(client, {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.acb.removeFromBlackList(client, {from: nonAuthorizedAddr}).should.be.rejected;
         });
     });
 });

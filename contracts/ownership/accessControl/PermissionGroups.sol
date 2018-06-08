@@ -10,7 +10,7 @@ import "../../utils/SafeMath.sol";
  * @dev Handles permisson management
  * @dev Admins are the ultimate decision makers.
  * @dev Therefore there should be always one admin, otherwise
- * @dev this contract will fall into uncontrolled state.
+ * @dev this contract will fall into an uncontrolled state.
  */
 contract PermissionGroups is RBAC {
     using SafeMath for uint256;
@@ -18,11 +18,11 @@ contract PermissionGroups is RBAC {
     string public constant ROLE_ADMIN = "admin";
     string public constant ROLE_OPERATOR = "operator";
     string public constant ROLE_BLACK_LISTED = "blacklisted";
-    uint256 private constant MAX_ADMIN_SIZE = 5;
-    uint256 private constant MAX_OPERATOR_SIZE = 50;
+    uint256 public constant MAX_ADMIN_SIZE = 5;
+    uint256 public constant MAX_OPERATOR_SIZE = 50;
 
-    uint256 private adminSize = 0;
-    uint256 private operatorSize = 0;
+    uint256 public adminSize = 0;
+    uint256 public operatorSize = 0;
 
     /**
      * @dev modifier to scope access to admins
@@ -55,7 +55,7 @@ contract PermissionGroups is RBAC {
      * @dev constructor. Sets msg.sender as admin by default
      */
     constructor() public {
-        adminSize.add(1);
+        adminSize = adminSize.add(1);
         addRole(msg.sender, ROLE_ADMIN);
     }
 
@@ -67,7 +67,9 @@ contract PermissionGroups is RBAC {
         require(adminSize < MAX_ADMIN_SIZE);
         require(newAdmin != address(0));
 
-        adminSize.add(1);
+        require(!isAdmin(newAdmin));
+        adminSize = adminSize.add(1);
+        
         addRole(newAdmin, ROLE_ADMIN);
     }
 
@@ -77,10 +79,10 @@ contract PermissionGroups is RBAC {
      */
     function removeAdmin(address admin) public onlyAdmin {
         // Removing all admins will put 
-        // the permisson groups in uncontrolled state
+        // the permisson groups in an uncontrolled state
         require(adminSize > 1);
         
-        adminSize.sub(1);
+        adminSize = adminSize.sub(1);
         removeRole(admin, ROLE_ADMIN);
     }
 
@@ -93,13 +95,6 @@ contract PermissionGroups is RBAC {
     }
 
     /**
-     * @dev Returns size of the admin group
-     */
-    function getSizeOfAdmins() public view returns(uint256) {
-        return adminSize;
-    }
-
-    /**
      * @dev Adds operator role to an address
      * @param newOperator address
      */
@@ -107,7 +102,9 @@ contract PermissionGroups is RBAC {
         require(operatorSize < MAX_OPERATOR_SIZE);
         require(newOperator != address(0));
 
-        operatorSize.add(1);
+        require(!isOperator(newOperator));
+        operatorSize = operatorSize.add(1);
+
         addRole(newOperator, ROLE_OPERATOR);
     }
 
@@ -116,7 +113,7 @@ contract PermissionGroups is RBAC {
      * @param operator address
      */
     function removeOperator(address operator) public onlyAdmin {
-        operatorSize.sub(1);
+        operatorSize = operatorSize.sub(1);
         removeRole(operator, ROLE_OPERATOR);
     }
 
@@ -126,13 +123,6 @@ contract PermissionGroups is RBAC {
      */
     function isOperator(address addr) public view returns(bool) {
         return hasRole(addr, ROLE_OPERATOR);
-    }
-
-    /**
-     * @dev Returns size of the operator group
-     */
-    function getSizeOfOperators() public view returns(uint256) {
-        return operatorSize;
     }
 
     /**

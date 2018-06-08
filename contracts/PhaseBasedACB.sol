@@ -68,11 +68,11 @@ contract PhaseBasedACB is ACB {
         phaseEndTime = endTime;
     }
 
-    function buyFromACB(uint256 tokenAmount) public payable whenPhaseActive {
+    function buyFromACB(uint256 tokenAmount) public payable whenPhaseActive onlyWhiteListed {
         super.buyFromACB(tokenAmount);
     }
 
-    function sellToACB(uint256 tokenAmount) public whenPhaseActive {
+    function sellToACB(uint256 tokenAmount) public whenPhaseActive onlyWhiteListed {
         super.sellToACB(tokenAmount);
     }
 }
