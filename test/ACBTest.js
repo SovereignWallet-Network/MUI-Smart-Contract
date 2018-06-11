@@ -141,6 +141,27 @@ contract('ACB', () => {
             postAdminEtherBalance.should.be.bignumber.above(preAdminEtherBalance.add(etherAmount).sub(approximateGasFee));
             postAdminTokenBalance.should.be.bignumber.equal(preAdminTokenBalance.add(tokenAmount));
         });
+
+        it('should be able to buy back token', async () => {
+            let tokenAmount = new BigNumber(5000);
+            let purchaseCost = Utils.calculateCost(tokenAmount, initialTokenPrice, 0, true);
+
+            let preAdminEtherBalance = await web3.eth.getBalance(admin);
+            let preAdminTokenBalance = await this.token.balanceOf(admin);
+            
+            let sellSupply = new BigNumber('5000');
+            // Set supplies (Buy supply is irrelevant in this case. Therefore do not set it)
+            await this.acb.setAvailableSupplies(new BigNumber('0'), sellSupply, {from: admin}).should.be.fulfilled;
+            // Buy back some token from ACB
+            await this.acb.buyBack(tokenAmount, {value: purchaseCost, from: admin}).should.be.fulfilled;
+
+            let postAdminEtherBalance = await web3.eth.getBalance(admin);
+            let postAdminTokenBalance = await this.token.balanceOf(admin);
+
+            // Compare pre and post balances for both ether and token
+            postAdminEtherBalance.should.be.bignumber.above(preAdminEtherBalance.sub(purchaseCost).sub(approximateGasFee));
+            postAdminTokenBalance.should.be.bignumber.equal(preAdminTokenBalance.add(tokenAmount));
+        });
     });
 
     describe('Owner', () => {
@@ -192,6 +213,11 @@ contract('ACB', () => {
     });
 
     describe('Non-authorized (without admin & owner permissons) callee', () => {
+        beforeEach(async () => {
+            // Set the sell supply in order to test `buyBack()` function against non authorized user call
+            await this.acb.setAvailableSupplies(new BigNumber('0'), new BigNumber('10000'), {from: admin}).should.be.fulfilled;
+        });
+
         it('should not be able to destroy the contract', async () => {
             // Try to destroy ACB contract
             await this.acb.destroy([this.token.address], {from: nonAuthorizedAddr}).should.be.rejected;
@@ -206,6 +232,8 @@ contract('ACB', () => {
             let feeRate = new BigNumber('3e13');     // 0.00003 ether
             let startTime = new BigNumber(Date.now() / 1000 + 60 * 60); // now + 1 hour
             let endTime = startTime.add(30 * 24 * 60 * 60); // startTime + 30 days
+            let tokenAmount = new BigNumber(5000);
+            let purchaseCost = Utils.calculateCost(tokenAmount, initialTokenPrice, 0, true);
             // Try to set prices
             await this.acb.setPrices(buyPrice, sellPrice, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set fee rate
@@ -218,6 +246,8 @@ contract('ACB', () => {
             await this.acb.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some token from ACB
             await this.acb.withdrawTokenAuthorized(this.token.address, clientToken, {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to buy back some token from ACB
+            await this.acb.buyBack(tokenAmount, {value: purchaseCost, from: nonAuthorizedAddr}).should.be.rejected;
         });
     });
 

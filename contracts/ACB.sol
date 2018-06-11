@@ -100,6 +100,14 @@ contract ACB is Withdrawable, Depositable, Destructible {
     }
 
     /**
+     * @dev This allows admins to buy tokens in any time regardless of phase
+     * @param tokenAmount uint256 Amount of token to be sold to the buyer
+     */
+    function buyBack(uint256 tokenAmount) public payable onlyAdmin {
+        buyFromACB(tokenAmount);
+    }
+
+    /**
      * @dev Client (msg.sender) buys token from ACB
      * @notice msg.sender is the buyer's address and msg.value is
      * the total amount of ether in wei that the buyer uses to buy tokens.
