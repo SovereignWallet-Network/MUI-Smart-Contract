@@ -131,6 +131,9 @@ contract ACB is Withdrawable, Depositable, Destructible {
 
     /**
      * @dev Client sells (msg.sender) token to ACB
+     * @notice Before calling this function in front-end, first approve the amount
+     * of token to be sold through MuiToken contract. After the call to `approve()`
+     * is mined, call this function.
      * @param tokenAmount uint256 Amount of the token that ACB buys from the seller
      */
     function sellToACB(uint256 tokenAmount) public {
