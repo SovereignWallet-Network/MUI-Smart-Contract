@@ -92,16 +92,16 @@ contract Airdrop is Withdrawable, Depositable, Destructible {
      */
     function checkMerkleProof(uint256 index, address recipient, uint256 amount, bytes32[] merkleProof) private view returns (bool) {
         // Compute the hash of the data leaf
-        bytes32 node = keccak256(index, recipient, amount);
+        bytes32 node = keccak256(abi.encodePacked(index, recipient, amount));
         uint256 path = index;
         for (uint16 i = 0; i < merkleProof.length; i++) {
             // Compute the hash of the node. Order of hasing is important!
             if ((path & 0x01) == 1) {
                 // If the current node is an even node, it must be hashed from right
-                node = keccak256(merkleProof[i], node);
+                node = keccak256(abi.encodePacked(merkleProof[i], node));
             } else {
                 // If the current node is an odd node, it must be hashed from left
-                node = keccak256(node, merkleProof[i]);
+                node = keccak256(abi.encodePacked(node, merkleProof[i]));
             }
             // Move to upper level in the tree
             path /= 2;
