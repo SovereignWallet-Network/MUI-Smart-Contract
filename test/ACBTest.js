@@ -34,27 +34,26 @@ contract('ACB', () => {
         // Deploy MUI Token contract
         this.token = await MuiToken.new(beneficiary);
 
-        // Set start and end time for initial phase
-        initialPhaseStartTime = new BigNumber(Date.now() / 1000 + 10); // now + 10 seconds
-        initialPhaseEndTime = initialPhaseStartTime.add(60 * 10); // initialPhaseStartTime + 10 minutes
-
         // Deploy Algorithmic Central Bank contract and fund some ether
         this.acb = await ACB.new(
             this.token.address, 
             initialTokenPrice, 
-            initialTokenPrice, 
-            initialPhaseStartTime, 
-            initialPhaseEndTime, 
+            initialTokenPrice,
             {value: initialEtherBalance}
         );
-
-        // Rewind the start time by 100 seconds so that the trading phase has been started already
-        await this.acb.moveTimeBeyondPhaseStart(100);
 
         // Fund the ACB contract with MUI token
         await this.token.transfer(this.acb.address, initialTokenSupply, {from: beneficiary});
         // Fund the client with some MUI token
         await this.token.transfer(client, clientToken, {from: beneficiary});
+
+        // Set start and end time for initial phase
+        initialPhaseStartTime = new BigNumber(Date.now() / 1000 + 10); // now + 10 seconds
+        initialPhaseEndTime = initialPhaseStartTime.add(60 * 10); // initialPhaseStartTime + 10 minutes
+
+        await this.acb.setSalePhase(initialPhaseStartTime, initialPhaseEndTime, 0, initialTokenSupply, initialTokenPrice, initialTokenPrice);
+        // Rewind the start time by 100 seconds so that the trading phase has been started already
+        await this.acb.moveTimeBeyondPhaseStart(100);
     });
 
     it('should reject direct ether receivals', async () => {
@@ -234,6 +233,9 @@ contract('ACB', () => {
             let endTime = startTime.add(30 * 24 * 60 * 60); // startTime + 30 days
             let tokenAmount = new BigNumber(5000);
             let purchaseCost = Utils.calculateCost(tokenAmount, initialTokenPrice, 0, true);
+
+            //Try to set sale phase
+            await this.acb.setSalePhase(startTime, endTime, buySupply, sellSupply, buyPrice, sellPrice, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set prices
             await this.acb.setPrices(buyPrice, sellPrice, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set fee rate

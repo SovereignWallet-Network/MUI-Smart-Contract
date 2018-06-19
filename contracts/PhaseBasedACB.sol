@@ -10,6 +10,9 @@ contract PhaseBasedACB is ACB {
 
     uint256 public phaseStartTime = 0;
     uint256 public phaseEndTime = 0;
+    uint256 public phaseIndex = 0;
+    uint256 public initialBuySupplyACB = 0;
+    uint256 public initialSellSupplyACB = 0;
 
 
     /**
@@ -18,6 +21,15 @@ contract PhaseBasedACB is ACB {
     modifier whenPhaseActive() {
         require(phaseStartTime < now && phaseEndTime > now);
         require(sellSupplyACB.add(buySupplyACB) > 0);
+        _;
+    }
+
+    /**
+     * @dev Modifier to make a function callable only when the phase is deactive
+     */
+    modifier whenPhaseDeactive() {
+        // Check both conditions that the phase has already finished & it hasn't started yet
+        require(phaseStartTime > now || phaseEndTime < now);
         _;
     }
 
@@ -31,19 +43,13 @@ contract PhaseBasedACB is ACB {
      * @param tokenAddress address Address of ERC20 compliant token to be traded
      * @param initialBuyPrice uint256 Initial buy price of ACB for the intended token
      * @param initialSellPrice uint256 Initial sell price of ACB for the intended token
-     * @param startTime uint256 Start time of the initial trading phase
-     * @param endTime uint256 End time of the initial trading phase
      */
     constructor(
         address tokenAddress, 
         uint256 initialBuyPrice, 
-        uint256 initialSellPrice, 
-        uint256 startTime, 
-        uint256 endTime) 
+        uint256 initialSellPrice) 
         public payable ACB(tokenAddress, initialBuyPrice, initialSellPrice)
-    {
-        setPhasePeriod(startTime, endTime);
-    }
+    {}
 
     /**
      * @dev Checks whether the current phase is active or not
@@ -55,9 +61,36 @@ contract PhaseBasedACB is ACB {
     }
 
     /**
-     * @dev Sets the start and end time of trade phase
-     * @param startTime uint256 The start time of trade phase
-     * @param endTime uint256 The end time of trade phase
+     * @dev Sets a sale phase.
+     * @param startTime uint256 The start time of sale phase
+     * @param endTime uint256 The end time of sale phase
+     * @param buySupplyACB uint256 Available token supply that ACB can buy up to in this phase
+     * @param sellSupplyACB uint256 Available token supply that ACB can sell up to in this phase
+     * @param buyPriceACB uint256 The price at which ACB buys in this phase
+     * @param sellPriceACB uint256 The price at which ACB sells in this phase
+     */
+    function setSalePhase(
+        uint256 startTime, 
+        uint256 endTime, 
+        uint256 buySupplyACB, 
+        uint256 sellSupplyACB, 
+        uint256 buyPriceACB, 
+        uint256 sellPriceACB) public onlyAdmin whenPhaseDeactive 
+    {
+        // Do not change this order. Price should be set before supply
+        setPhasePeriod(startTime, endTime);
+        super.setPrices(buyPriceACB, sellPriceACB);
+        super.setAvailableSupplies(buySupplyACB, sellSupplyACB);
+        
+        initialBuySupplyACB = buySupplyACB;
+        initialSellSupplyACB = sellSupplyACB;
+        phaseIndex++;
+    }
+
+    /**
+     * @dev Sets the start and end time of sale phase
+     * @param startTime uint256 The start time of sale phase
+     * @param endTime uint256 The end time of sale phase
      */
     function setPhasePeriod(uint256 startTime, uint256 endTime) public onlyAdmin {
         // Do not allow to set start & end time to a value in past
@@ -74,5 +107,13 @@ contract PhaseBasedACB is ACB {
 
     function sellToACB(uint256 tokenAmount) public whenPhaseActive onlyWhiteListed {
         super.sellToACB(tokenAmount);
+    }
+
+    /**
+     * @dev This allows admins to buy tokens in any time regardless of phase
+     * @param tokenAmount uint256 Amount of token to be sold to the buyer
+     */
+    function buyBack(uint256 tokenAmount) public payable onlyAdmin {
+        super.buyFromACB(tokenAmount);
     }
 }

@@ -1,6 +1,6 @@
 const HDWalletProvider = require("truffle-hdwallet-provider");
 
-const mnemonic = "distance sting mention other fragile vehicle bind immense reason force funny wolf";
+const mnemonic = "<mnemonics of your wallet>";
 
 module.exports = {
   networks: {
@@ -16,7 +16,7 @@ module.exports = {
     //   gas: 4700000
     // },
     "ropsten-infura": {
-      provider: () => new HDWalletProvider(mnemonic, "https://ropsten.infura.io/zCPaFWlkAWiqVP0btZR1"),
+      provider: () => new HDWalletProvider(mnemonic, "https://ropsten.infura.io/<infura private key>"),
       network_id: 3,
       gas: 4700000
     }

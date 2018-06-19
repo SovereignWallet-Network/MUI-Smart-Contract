@@ -15,7 +15,7 @@ import "./lifecycle/Destructible.sol";
 contract ACB is Withdrawable, Depositable, Destructible {
     using SafeMath for uint256;
 
-    uint256 public constant FEE_RATE_DENOMINATOR = 10000;
+    uint256 public constant FEE_RATE_DENOMINATOR = 1000000;
 
     ERC20 public token;
     uint256 public buyPriceACB; // In wei
@@ -57,7 +57,9 @@ contract ACB is Withdrawable, Depositable, Destructible {
     }
 
     /**
-     * @dev Sets the prices in ACB for trade
+     * @dev Sets the prices in ACB for trade.
+     * @notice Does not allow to set prices zero 
+     * but also does not revert to keep the previous values.
      * @param _buyPriceACB uint256 The price that ACB buys the token in regard
      * @param _sellPriceACB uint 256 The price that ACB sells the token in regard
      */
@@ -86,6 +88,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
 
     /**
      * @dev Sets the available token supplies that ACB can buy and sell
+     * @notice If the buy price is zero, it will revert the transaction.
      * @notice Supplies can be set to zero but not to negative values
      * @param _buySupplyACB uint256 Available token supply that ACB can buy
      * @param _sellSupplyACB uint256 Available token supply that ACB can sell
@@ -97,14 +100,6 @@ contract ACB is Withdrawable, Depositable, Destructible {
         require(address(this).balance.div(buyPriceACB) >= _buySupplyACB);
 
         setSupplies(_buySupplyACB, _sellSupplyACB);
-    }
-
-    /**
-     * @dev This allows admins to buy tokens in any time regardless of phase
-     * @param tokenAmount uint256 Amount of token to be sold to the buyer
-     */
-    function buyBack(uint256 tokenAmount) public payable onlyAdmin {
-        buyFromACB(tokenAmount);
     }
 
     /**
@@ -179,7 +174,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param isBuy bool Indicates whether the trade is a buy or sell in client's point of view
      * @return Calculated cost
      */
-     // TODO: Fee should be taken in token when the client sells the token to ACB
+     // TODO: Fee should be taken in token when the client sells tokens to ACB
     function calculateCost(uint256 tokenAmount, uint256 tokenPrice, uint256 feeRate, bool isBuy) internal pure returns(uint256) {
         uint256 baseCost = tokenAmount.mul(tokenPrice);
         uint256 feeCost = feeRate > 0 ? baseCost.mul(feeRate).div(FEE_RATE_DENOMINATOR) : 0;
