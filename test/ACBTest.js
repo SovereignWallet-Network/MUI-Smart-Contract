@@ -65,6 +65,19 @@ contract('ACB', () => {
     });
 
     describe('Admin', () => {
+        it('should be able to buy and sell caps', async () => {
+            let buyCap = new BigNumber('1e3');   // 1000 token
+            let sellCap = new BigNumber('2e3');   // 1000 token
+            // Set minimum funding cap
+            await this.acb.setBuySellCaps(buyCap, sellCap).should.be.fulfilled;
+            // Get buy and sell caps back
+            let expectedBuyCap = await this.acb.maxBuyAmountACB();
+            let expectedSellCap = await this.acb.minSellAmountACB();
+            // And compare them
+            expectedBuyCap.should.be.bignumber.equal(buyCap);
+            expectedSellCap.should.be.bignumber.equal(sellCap);
+        });
+
         it('should be able to set prices', async () => {
             let buyPrice = new BigNumber('3e14');   // 0.0003 ether
             let sellPrice = new BigNumber('33e13'); // 0.00033 ether
@@ -229,6 +242,7 @@ contract('ACB', () => {
             let buySupply = new BigNumber('1e15');   // 10**15 token
             let sellSupply = new BigNumber('0');     // 0 token
             let feeRate = new BigNumber('3e13');     // 0.00003 ether
+            let cap = new BigNumber('1e3');          // 1000 token
             let startTime = new BigNumber(Date.now() / 1000 + 60 * 60); // now + 1 hour
             let endTime = startTime.add(30 * 24 * 60 * 60); // startTime + 30 days
             let tokenAmount = new BigNumber(5000);
@@ -244,6 +258,8 @@ contract('ACB', () => {
             await this.acb.setAvailableSupplies(buySupply, sellSupply, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to set phase period
             await this.acb.setPhasePeriod(startTime, endTime, {from: nonAuthorizedAddr}).should.be.rejected;
+            // Try to set minimum funding cap
+            await this.acb.setBuySellCaps(cap, cap, {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some ether from ACB
             await this.acb.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some token from ACB
@@ -427,6 +443,17 @@ contract('ACB', () => {
             postClientEtherBalance.should.be.bignumber.above(preClientEtherBalance.sub(approximateGasFee));
         });
 
+        it('should not be able to buy less than minimum sell cap of ACB', async () => {
+            // First set the cap
+            let sellCapACB = new BigNumber('6e3');   // 6000 token
+            // Set minimum sell cap of ACB
+            await this.acb.setBuySellCaps(0, sellCapACB).should.be.fulfilled;
+
+            let purchaseCost = Utils.calculateCost(tokenAmount, sellPrice, 0, true);
+            // Try to buy 5000 tokens
+            await this.acb.buyFromACB(tokenAmount, {value: purchaseCost, from: client}).should.be.rejected;
+        });
+
         it('should not be able to sell if ether balance of ACB is not enough', async () => {
             // First set buy first to a higher value so that the amount of token to be sold
             // values more than ether balance of ACB. i.e. initialEtherBalance < buyPrice * tokenAmount
@@ -467,6 +494,18 @@ contract('ACB', () => {
             // Check post token balance of client whether she/he has lost token or not
             postClientTokenBalance = await this.token.balanceOf(client);
             postClientTokenBalance.should.be.bignumber.equal(preClientTokenBalance);
+        });
+
+        it('should not be able to sell more than maximum buy cap of ACB', async () => {
+            // First set the cap
+            let buyCapACB = new BigNumber('4e3');   // 4000 token
+            // Set minimum sell cap of ACB
+            await this.acb.setBuySellCaps(buyCapACB, 0).should.be.fulfilled;
+
+            // Allow ACB contract to transfer tokens from client's balance
+            await this.token.approve(this.acb.address, tokenAmount, {from: client}).should.be.fulfilled;
+            // Try to sell 5000 tokens which is more than what ACB can buy (4000 token in this case)
+            await this.acb.sellToACB(tokenAmount, {from: client}).should.be.rejected;
         });
     });
 

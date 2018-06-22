@@ -8,10 +8,10 @@ import "./lifecycle/Destructible.sol";
 
 
 /**
+ * @author Mustafa Morca
  * @title ACB
  * @dev Algorithmic Central Bank
  */
- // TODO: Do not keep the funds in this contract address, rather use some other addresses
 contract ACB is Withdrawable, Depositable, Destructible {
     using SafeMath for uint256;
 
@@ -23,6 +23,8 @@ contract ACB is Withdrawable, Depositable, Destructible {
     uint256 public buySupplyACB = 0;
     uint256 public sellSupplyACB = 0;
     uint256 public feeRateACB = 0;
+    uint256 public minSellAmountACB = 0;
+    uint256 public maxBuyAmountACB = ~uint256(0);
 
 
     event TokenExchange(address indexed client, uint256 tokenAmount, uint256 atPrice, bool isBuy);
@@ -103,6 +105,24 @@ contract ACB is Withdrawable, Depositable, Destructible {
     }
 
     /**
+     * @dev Sets the minimum token amount that one can buy from ACB
+     * @dev and the maximum token amount one can sell to ACB.
+     * @dev If the parameters are passed as zero, it will not set the regarding variable
+     * @dev This is for being able to set one variable and to leave the other unchanged
+     * @param buyCapACB uit256 Maximum amount of token that can be sold to ACB
+     * @param sellCapACB uint256 Minimum amount of token that can be bought from ACB
+     */
+    function setBuySellCaps(uint256 buyCapACB, uint256 sellCapACB) public onlyAdmin {
+        if (buyCapACB > 0) {
+            maxBuyAmountACB = buyCapACB;
+        }
+        
+        if (sellCapACB > 0) {
+            minSellAmountACB = sellCapACB;
+        }
+    }
+
+    /**
      * @dev Client (msg.sender) buys token from ACB
      * @notice msg.sender is the buyer's address and msg.value is
      * the total amount of ether in wei that the buyer uses to buy tokens.
@@ -113,7 +133,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param tokenAmount uint256 Amount of token to be sold to the buyer
      */
     function buyFromACB(uint256 tokenAmount) public payable {
-        require(tokenAmount > 0);
+        require(tokenAmount > 0 && tokenAmount >= minSellAmountACB);
         require(sellSupplyACB >= tokenAmount);
 
         uint256 weiAmount = calculateCost(tokenAmount, sellPriceACB, feeRateACB, true);
@@ -140,7 +160,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param tokenAmount uint256 Amount of the token that ACB buys from the seller
      */
     function sellToACB(uint256 tokenAmount) public {
-        require(tokenAmount > 0);
+        require(tokenAmount > 0 && tokenAmount <= maxBuyAmountACB);
         require(buySupplyACB >= tokenAmount);
 
         uint256 weiAmount = calculateCost(tokenAmount, buyPriceACB, feeRateACB, false);
