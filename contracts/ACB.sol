@@ -18,8 +18,8 @@ contract ACB is Withdrawable, Depositable, Destructible {
     uint256 public constant FEE_RATE_DENOMINATOR = 1000000;
 
     ERC20 public token;
-    uint256 public buyPriceACB; // In wei
-    uint256 public sellPriceACB; // In wei
+    uint256 public buyPriceACB;     // Price of the 1 token in wei
+    uint256 public sellPriceACB;    // Price of 1 ether in token
     uint256 public buySupplyACB = 0;
     uint256 public sellSupplyACB = 0;
     uint256 public feeRateACB = 0;
@@ -129,20 +129,16 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @notice msg.value should be precisely calculated prior to calling 
      * this function in front-end because there will be no refund to the callee 
      * for the remaing ether sent along this function call.
-     * @notice this design may change in future updates
-     * @param tokenAmount uint256 Amount of token to be sold to the buyer
+     * @notice this design may change in future updates.
      */
-    function buyFromACB(uint256 tokenAmount) public payable {
-        require(tokenAmount > 0 && tokenAmount >= minSellAmountACB);
+    function buyFromACB() public payable {
+        // Check the minimum cap
+        require(msg.value >= minSellAmountACB);
+        
+        // Calculate the equivalent number of token for the sent ether
+        uint256 tokenAmount = sellPriceACB.mul(msg.value).div(1 ether);
+
         require(sellSupplyACB >= tokenAmount);
-
-        uint256 weiAmount = calculateCost(tokenAmount, sellPriceACB, feeRateACB, true);
-
-        // Check whether or not the amount of ether sent alongside 
-        // is enough to buy the requested amount of token.
-        // Notice that if the amount of ether sent is more than the required amount
-        // the remaining is not refunded. Therefore handle the calculation of ether amount in front-end
-        require(msg.value >= weiAmount);
         require(token.balanceOf(this) >= tokenAmount);
 
         sellSupplyACB = sellSupplyACB.sub(tokenAmount);
@@ -174,6 +170,14 @@ contract ACB is Withdrawable, Depositable, Destructible {
         withdrawEther(msg.sender, weiAmount);
 
         emit TokenExchange(msg.sender, tokenAmount, buyPriceACB, false);
+    }
+
+    /**
+     */
+     // TODO: Confirm this function
+    function feeCollector(address to, uint256 fee) public payable {
+        uint256 afterFee = msg.value.sub(fee);
+        to.transfer(afterFee);
     }
 
     /**

@@ -101,8 +101,8 @@ contract PhaseBasedACB is ACB {
         phaseEndTime = endTime;
     }
 
-    function buyFromACB(uint256 tokenAmount) public payable whenPhaseActive onlyWhiteListed {
-        super.buyFromACB(tokenAmount);
+    function buyFromACB() public payable whenPhaseActive onlyWhiteListed {
+        super.buyFromACB();
     }
 
     function sellToACB(uint256 tokenAmount) public whenPhaseActive onlyWhiteListed {
@@ -111,9 +111,8 @@ contract PhaseBasedACB is ACB {
 
     /**
      * @dev This allows admins to buy tokens in any time regardless of phase
-     * @param tokenAmount uint256 Amount of token to be sold to the buyer
      */
-    function buyBack(uint256 tokenAmount) public payable onlyAdmin {
-        super.buyFromACB(tokenAmount);
+    function buyBack() public payable onlyAdmin {
+        super.buyFromACB();
     }
 }

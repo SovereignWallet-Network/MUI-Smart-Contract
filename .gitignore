@@ -13,3 +13,6 @@ package-lock.json
 
 #OS specific files
 .DS_store
+
+#Information sensitive files
+deployer.json
