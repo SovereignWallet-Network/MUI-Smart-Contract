@@ -3,11 +3,6 @@ const Deployer = require('./deployer.json');
 
 module.exports = {
   networks: {
-    // development: {
-    //   host: "127.0.0.1",
-    //   port: 9545,
-    //   network_id: "*" // Match any network id
-    // }
     "mainnet": {
       provider: () => new HDWalletProvider(Deployer.mnemonics.mainnet, Deployer.web3Providers.mainnet),
       network_id: 1,
