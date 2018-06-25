@@ -4,7 +4,7 @@ const Airdrop = artifacts.require("./Airdrop.sol");
 
 const initialSellPrice = 6 * 10 ** 9;       // 1 ether = 6000 MUI
 // TODO: Change this number if you want to fund ACB contract with ether
-const initialEtherDeposit = 5 * 10 ** 18;   // 10 ether
+const initialEtherDeposit = 1 * 10 ** 18;   // 10 ether
 // TODO: Do not use this address in mainnet deployment!!!!!
 const TOKEN_ADDRESS = '0xb83acc3c4432c34855f5009d0ef944668790c445'; // MUIBT address, see https://ropsten.etherscan.io/token/0xb83acc3c4432c34855f5009d0ef944668790c445
 
@@ -27,19 +27,13 @@ const TOKEN_ADDRESS = '0xb83acc3c4432c34855f5009d0ef944668790c445'; // MUIBT add
 
 
 module.exports = (deployer, network, accounts) => {
-    deployer.then(() => {
-       return new Promise((accept, reject) => {
-         deployer.deploy(MuiToken, accounts[0])
-           .on("confirmation", (number, receipt) => {
-              if (number === 10) accept(receipt);
-           })
-           .catch(reject);
-        });
-     }).then(function(receipt){
-        deployer.deploy(ACB, MuiToken.address, 0, initialSellPrice, {value: initialEtherDeposit})
-            .on("confirmation", (number, receipt) => {
-                if (number === 10) accept(receipt);
-            })
-            .catch(reject);
-     }).catch(error => console.log(`Deployer failed. ${error}`))
-}
+    // Deploy MuiToken contract
+    deployer.deploy(MuiToken, accounts[0])
+        .then(() => MuiToken.deployed())
+        .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 60000)))
+        .then(registry => {
+            // Deploy ACB contract
+            deployer.deploy(ACB, registry.address, 0, initialSellPrice, {value: initialEtherDeposit});
+        })
+        .catch(e => console.log(`Deployer failed. ${e}`));
+};
