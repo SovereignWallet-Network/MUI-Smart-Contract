@@ -4,10 +4,10 @@ const Airdrop = artifacts.require("./Airdrop.sol");
 
 const initialSellPrice = 6 * 10 ** 9;       // 1 ether = 6000 MUI
 // TODO: Change this number if you want to fund ACB contract with ether
-const initialEtherDeposit = 0 * 10 ** 18;   // 10 ether
+const initialEtherDeposit = 5 * 10 ** 18;   // 10 ether
 // TODO: Do not use this address in mainnet deployment!!!!!
 const MUIBT_TOKEN_ADDRESS = '0xb83acc3c4432c34855f5009d0ef944668790c445'; // MUIBT address, see https://ropsten.etherscan.io/token/0xb83acc3c4432c34855f5009d0ef944668790c445
-const MUI_TOKEN_ADDRESS = '0x35321c78a48dd9ace94c8e060a4fc279a3a2d9fc'; 
+const MUI_TOKEN_ADDRESS = '0x35321c78a48dd9ace94c8e060a4fc279a3a2d9fc';
 
 // TODO: Comment out this function in mainnet deployment!!!!!!!
 // module.exports = (deployer, network, accounts) => {
@@ -44,7 +44,7 @@ module.exports = (deployer, network, accounts) => {
 
     // Deploy ACB contract
     deployer.deploy(ACB, MUI_TOKEN_ADDRESS, 0, initialSellPrice, {value: initialEtherDeposit})
-        .then(() => MuiToken.deployed())
+        .then(() => ACB.deployed())
         .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 150000)))
         .catch(e => console.log(`Deployer failed. ${e}`));
 };
