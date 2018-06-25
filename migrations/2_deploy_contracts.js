@@ -31,7 +31,7 @@ module.exports = (deployer, network, accounts) => {
     // Deploy MuiToken contract
     deployer.deploy(MuiToken, accounts[0])
         .then(() => MuiToken.deployed())
-        .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 60000)))
+        .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 150000)))
         .then(registry => {
             // Deploy ACB contract
             deployer.deploy(ACB, registry.address, 0, initialSellPrice, {value: initialEtherDeposit});
