@@ -10,7 +10,8 @@ const TOKEN_ADDRESS = '0xb83acc3c4432c34855f5009d0ef944668790c445';
 
 // TODO: Comment out this function in mainnet deployment!!!!!!!
 module.exports = (deployer, network, accounts) => {
-    deployer.deploy(ACB, TOKEN_ADDRESS, 0, initialSellPrice, {value: initialEtherDeposit})
+    deployer.deploy(ACB, MuiToken.address, 0, initialSellPrice, {value: initialEtherDeposit})
+//    deployer.deploy(ACB, TOKEN_ADDRESS, 0, initialSellPrice, {value: initialEtherDeposit})
         .then( _ => console.log('ACB contract has been deployed successfully.'));
 };
 
