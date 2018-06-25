@@ -173,11 +173,15 @@ contract ACB is Withdrawable, Depositable, Destructible {
     }
 
     /**
+     * @dev Transfers the ether value sent alongside after fee deduction.
+     * @param to address Address of the recipient
+     * @param fee uint256 Fee to be deducted from transfer
      */
-     // TODO: Confirm this function
     function feeCollector(address to, uint256 fee) public payable {
+        require(msg.value > fee);
+
         uint256 afterFee = msg.value.sub(fee);
-        to.transfer(afterFee);
+        withdrawEther(to, afterFee);
     }
 
     /**
