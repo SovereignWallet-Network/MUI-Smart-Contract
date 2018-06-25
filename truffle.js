@@ -15,7 +15,7 @@ module.exports = {
     },
     "rinkeby": {
       provider: () => new HDWalletProvider(Deployer.mnemonics.testnet, Deployer.web3Providers.rinkeby),
-      network_id: 3,
+      network_id: 4,
       gas: 4700000
     }
   }
