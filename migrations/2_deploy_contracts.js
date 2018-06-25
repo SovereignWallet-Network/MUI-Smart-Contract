@@ -4,7 +4,7 @@ const Airdrop = artifacts.require("./Airdrop.sol");
 
 const initialSellPrice = 6 * 10 ** 9;       // 1 ether = 6000 MUI
 // TODO: Change this number if you want to fund ACB contract with ether
-const initialEtherDeposit = 10 * 10 ** 18;   // 10 ether
+const initialEtherDeposit = 5 * 10 ** 18;   // 10 ether
 // TODO: Do not use this address in mainnet deployment!!!!!
 const TOKEN_ADDRESS = '0xb83acc3c4432c34855f5009d0ef944668790c445'; // MUIBT address, see https://ropsten.etherscan.io/token/0xb83acc3c4432c34855f5009d0ef944668790c445
 
