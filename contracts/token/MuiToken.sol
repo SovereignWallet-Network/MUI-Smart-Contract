@@ -5,11 +5,11 @@ import "../ownership/Claimable.sol";
 import "./BulkTransferable.sol";
 
 /**
- * @title MuiToken
+ * @title MUI Token
  * @dev SovereignWallet Network token
  */
 contract MuiToken is PausableToken, Claimable {
-    string public constant name = "MuiToken";
+    string public constant name = "MUI Token";
     string public constant symbol = "MUI";
     uint8 public constant decimals = 6;
     uint256 public constant TOKEN_SUPPLY = 1000000000; // 1 billion = 1e9 MUI token
