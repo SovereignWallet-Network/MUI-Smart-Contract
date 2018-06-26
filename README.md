@@ -1,7 +1,6 @@
 This repository has the main contracts in SovereignWallet Network platform. The MUI token contract and Algorithmic Central Bank contract are the main components in this repository. This repository is for testing purposes only, do not use it for real deployment.
 
-# Testnet Deployment
-
+# Ethereum Mainnet Deployment
 
 MUI token contract and Algorithmic Central Bank contract are deployed on Ethereum Mainnet. The deployed contracts are as below.
 
