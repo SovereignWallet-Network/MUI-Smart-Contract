@@ -8,21 +8,23 @@ import "./lifecycle/Destructible.sol";
 
 
 /**
+ * @author Mustafa Morca
  * @title ACB
  * @dev Algorithmic Central Bank
  */
- // TODO: Do not keep the funds in this contract address, rather use some other addresses
 contract ACB is Withdrawable, Depositable, Destructible {
     using SafeMath for uint256;
 
     uint256 public constant FEE_RATE_DENOMINATOR = 1000000;
 
     ERC20 public token;
-    uint256 public buyPriceACB; // In wei
-    uint256 public sellPriceACB; // In wei
+    uint256 public buyPriceACB;     // Price of the 1 token in wei
+    uint256 public sellPriceACB;    // Price of 1 ether in token
     uint256 public buySupplyACB = 0;
     uint256 public sellSupplyACB = 0;
     uint256 public feeRateACB = 0;
+    uint256 public minSellAmountACB = 0;
+    uint256 public maxBuyAmountACB = ~uint256(0);
 
 
     event TokenExchange(address indexed client, uint256 tokenAmount, uint256 atPrice, bool isBuy);
@@ -103,26 +105,40 @@ contract ACB is Withdrawable, Depositable, Destructible {
     }
 
     /**
+     * @dev Sets the minimum token amount that one can buy from ACB
+     * @dev and the maximum token amount one can sell to ACB.
+     * @dev If the parameters are passed as zero, it will not set the regarding variable
+     * @dev This is for being able to set one variable and to leave the other unchanged
+     * @param buyCapACB uit256 Maximum amount of token that can be sold to ACB
+     * @param sellCapACB uint256 Minimum amount of token that can be bought from ACB
+     */
+    function setBuySellCaps(uint256 buyCapACB, uint256 sellCapACB) public onlyAdmin {
+        if (buyCapACB > 0) {
+            maxBuyAmountACB = buyCapACB;
+        }
+        
+        if (sellCapACB > 0) {
+            minSellAmountACB = sellCapACB;
+        }
+    }
+
+    /**
      * @dev Client (msg.sender) buys token from ACB
      * @notice msg.sender is the buyer's address and msg.value is
      * the total amount of ether in wei that the buyer uses to buy tokens.
      * @notice msg.value should be precisely calculated prior to calling 
      * this function in front-end because there will be no refund to the callee 
      * for the remaing ether sent along this function call.
-     * @notice this design may change in future updates
-     * @param tokenAmount uint256 Amount of token to be sold to the buyer
+     * @notice this design may change in future updates.
      */
-    function buyFromACB(uint256 tokenAmount) public payable {
-        require(tokenAmount > 0);
+    function buyFromACB() public payable {
+        // Check the minimum cap
+        require(msg.value >= minSellAmountACB);
+        
+        // Calculate the equivalent number of token for the sent ether
+        uint256 tokenAmount = sellPriceACB.mul(msg.value).div(1 ether);
+
         require(sellSupplyACB >= tokenAmount);
-
-        uint256 weiAmount = calculateCost(tokenAmount, sellPriceACB, feeRateACB, true);
-
-        // Check whether or not the amount of ether sent alongside 
-        // is enough to buy the requested amount of token.
-        // Notice that if the amount of ether sent is more than the required amount
-        // the remaining is not refunded. Therefore handle the calculation of ether amount in front-end
-        require(msg.value >= weiAmount);
         require(token.balanceOf(this) >= tokenAmount);
 
         sellSupplyACB = sellSupplyACB.sub(tokenAmount);
@@ -140,7 +156,7 @@ contract ACB is Withdrawable, Depositable, Destructible {
      * @param tokenAmount uint256 Amount of the token that ACB buys from the seller
      */
     function sellToACB(uint256 tokenAmount) public {
-        require(tokenAmount > 0);
+        require(tokenAmount > 0 && tokenAmount <= maxBuyAmountACB);
         require(buySupplyACB >= tokenAmount);
 
         uint256 weiAmount = calculateCost(tokenAmount, buyPriceACB, feeRateACB, false);
@@ -154,6 +170,18 @@ contract ACB is Withdrawable, Depositable, Destructible {
         withdrawEther(msg.sender, weiAmount);
 
         emit TokenExchange(msg.sender, tokenAmount, buyPriceACB, false);
+    }
+
+    /**
+     * @dev Transfers the ether value sent alongside after fee deduction.
+     * @param to address Address of the recipient
+     * @param fee uint256 Fee to be deducted from transfer
+     */
+    function feeCollector(address to, uint256 fee) public payable {
+        require(msg.value > fee);
+
+        uint256 afterFee = msg.value.sub(fee);
+        withdrawEther(to, afterFee);
     }
 
     /**
