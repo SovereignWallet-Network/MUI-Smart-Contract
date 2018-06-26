@@ -3,10 +3,10 @@ This repository has the main contracts in SovereignWallet Network platform. The 
 # Testnet Deployment
 
 
-We have a functional deployment running on ropsten testnet. The deployed contracts are as below.
+MUI token contract and Algorithmic Central Bank contract are deployed on Ethereum Mainnet. The deployed contracts are as below.
 
-1. MuiToken contract address = [...](https://ropsten.etherscan.io/address/...)
-2. Algorithmic Central Bank contract address = [...](https://ropsten.etherscan.io/address/...)
+1. MUI token contract address = 0x35321c78a48dd9ace94c8e060a4fc279a3a2d9fc
+2. Algorithmic Central Bank contract address = 0xd48165de9d697ae724e93a7fb2f44caa77610fa6
 
 ## Algorithmic Central Bank Functions
 
@@ -45,7 +45,7 @@ This functions can be called by admin to set the limited amount of supply that t
 ### setPhasePeriod
 
 ```
-function setPhasePeriod(uint256 startTime, 
+function setPhasePeriod(uint256 startTime,
                         uint256 endTime) public onlyAdmin {}
 ```
 
