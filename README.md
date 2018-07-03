@@ -1,84 +1,57 @@
-This repository has the main contracts in SovereignWallet Network platform. The MUIToken contract is the main component in this repository. This repository is for testing purposes only, do not use it for real deployment.
+This repository keeps the main contracts in SovereignWallet Network platform. 
+The MUI token and Algorithmic Central Bank contracts are the main components in this repository.
 
 # Testnet Deployment
 
----
 
-We have a functional deployment running on ropsten testnet. The deployed contracts are as below.
+The deployed contracts on the Ethereum mainnet are as follows.
 
-1.  SovereignNetworkkcontract address = [0x3f549015d758ef30d355fc412f1386f753f9c0b0](https://ropsten.etherscan.io/address/0x3f549015d758ef30d355fc412f1386f753f9c0b0)
+1. MuiToken contract address = [0x35321c78a48dd9ace94c8e060a4fc279a3a2d9fc](https://etherscan.io/token/0x35321c78a48dd9ace94c8e060a4fc279a3a2d9fc)
+2. Algorithmic Central Bank contract address = [0xd48165de9d697ae724e93a7fb2f44caa77610fa6](https://etherscan.io/address/0xd48165de9d697ae724e93a7fb2f44caa77610fa6)
 
-The abi of SovereignNetworkk contract is available at [link](https://github.com/phantomcoco/MUI_Solidity/blob/master/contracts/abi/MUIToken.abi)
+## Algorithmic Central Bank Functions
 
-## Functions
+The public functions of Algorithmic Central Bank are described as below.
 
-We describe the main functions of the MUIToken contract as below.
 
-### setPrices
-
+### isPhaseActive
 ```
-function setPrices(uint256 _newSellPrice,
-                   uint256 _newBuyPrice) onlyOwner public {}
+function isPhaseActive() public view returns (bool) {}
 ```
 
-This function is called when set the current MUI's price in the admin tool.
-This is the current price _`_newSellPrice`_ _`_newBuyPrice`_ applied when a user buys or sells in Sovereign Wallet Market.
+Returns true if the current phase is active, false otherwise.
 
-### setBidPrice
 
-```
-function setBidPrice(uint256 _value) onlyOwner public {}
-```
-
-This function is called by the admin tool when set the current Bid MUI's price.
-Set the price of the MUI Token's bid price when SovereignWallet Network need to buy the tokens.
-_`_value`_ is applied when a user sells in Sovereign Wallet Market if bid supply is existed.
-
-### setAvailableSupply
+### buyFromACB
 
 ```
-function setAvailableSupply(uint256 _value) onlyOwner public {}
+function buyFromACB(uint256 _amount) public payable whenPhaseActive onlyWhiteListed
 ```
 
-This functions is called by the admin tool when set the limited amount of supply that the buyer can currently buy on SovereignWallet market. Buyer can't buy over _`_value`_ amount of tokens. The transaction will be failed.
+This function is called when the clien wants to buy the MUI tokens on SovereignWallet market.
+The client is expected to transfer ether which is proportional to _`_amount`_ of token. Otherwise the transaction will be reverted. Ether cost should be calculated with the current sellPrice of ACB plus fee rate. The available supply is reduced by the amount of MUI tokens purchased.
 
-### setBidSupply
 
-```
-function setBidSupply(uint256 _value) onlyOwner public {}
-```
-
-This function is called by the admin tool when set the limited amount of bid supply that buyer can currently sell on SovereignWallet market. Seller can't sell over _`_value`_ amount of tokens. The transaction will be failed.
-
-### buy
+### sellToACB
 
 ```
-function buy(address _buyer,
-             uint256 _amount) public {}
+function sellToACB(uint256 _amount) public whenPhaseActive onlyWhiteListed
 ```
 
-This function is called when user buy the MUI tokens on SovereignWallet market.
-Owner transfers the number of tokens proportional to the ether _`_amount`_ received to buyer's account.
-The available supply is reduced by the amount of MUI tokens purchased by the buyer.
+This functions is called when the client wants to sell the MUI tokens on SovereignWallet market.
+The client is expected to have at least _`_amount`_ of balance of MUI tokens.
 
-### sell
 
-```
-function sell(address _seller,
-              uint256 _amount) public {}
-```
-
-This functions is called when user sell the MUI tokens on SovereignWallet market.
-Owner send the amount of ehter proportional to the _`_amount`_ of tokens received to seller's account.
-
-### send
+### feeCollector
 
 ```
-function send(address _from,
-              address _to,
-              uint256 _amount) public {}
+function feeCollector(address to, uint256 fee) public payable
 ```
 
-This functions is called when user send the MUI tokens to other user on SovereignWallet.
-_`_from`_ is the source account who wants to transfer to _`_to`_ account.
-The user can send to friend or set the destination address on our wallet application.
+Transfers the recipient the ether sent alongside the transaction after fee deduction. _`to`_ is the address of the recipient and _`fee`_ is the fee to be applied to this transaction.
+
+
+## Test
+
+1. Install testing framework by running `npm i -g mocha chai chai-as-promised chai-bignumber`
+2. Run `truffle test` in the project directory.
