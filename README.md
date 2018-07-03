@@ -53,5 +53,6 @@ Transfers the recipient the ether sent alongside the transaction after fee deduc
 
 ## Test
 
-1. Install testing framework by running `npm i -g mocha chai chai-as-promised chai-bignumber`
-2. Run `truffle test` in the project directory.
+1. Install node v10.4.0
+2. Install test framework by running `npm i -g mocha chai chai-as-promised chai-bignumber`
+3. Run `truffle test` in the project directory.
