@@ -1,7 +1,7 @@
 {
   "name": "mui_solidity",
   "version": "1.0.0",
-  "description": "This repository has the main contracts in SovereignWallet Network platform. The MUI Token contract is the main component in this repository. This repository is for testing purposes only, do not use it for real deployment.",
+  "description": "This repository has the main contracts in SovereignWallet Network platform. The MUIToken contract is the main component in this repository. This repository is for testing purposes only, do not use it for real deployment.",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
