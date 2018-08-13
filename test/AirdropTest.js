@@ -1,19 +1,17 @@
-let Utils = require('./utils');
-let Airdropper = require('./airdropper');
-
-let BigNumber = web3.BigNumber;
-
-let should = require('chai')
+const BigNumber = web3.BigNumber;
+require('chai')
     .use(require('chai-as-promised'))
     .use(require('chai-bignumber')(BigNumber))
     .use(require('chai-string'))
     .should();
 
-let Airdrop = artifacts.require("Airdrop");
-let MuiToken = artifacts.require("MuiToken");
+const Utils = require('./utils');
+const Airdropper = require('./airdropper');
+const Airdrop = artifacts.require("Airdrop");
+const MuiToken = artifacts.require("MuiToken");
+
 
 contract('Airdrop', () => {
-    let initialTokenSupply = new BigNumber('1e9');
     let airdropSupply = new BigNumber(1000000);
     // Notice that this approximation does not neccessarily mean that it is correct.
     // Therefore do not rely on this approximation all the time
@@ -46,12 +44,21 @@ contract('Airdrop', () => {
     });
 
     describe('Admin', () => {
+        it('should be able to pause and unpause the contract', async () => {
+            // First pause the contract
+            await this.airdrop.pause().should.be.fulfilled;
+            // Then unpause it
+            await this.airdrop.unpause().should.be.fulfilled;
+        });
+
         it('should be able to set incentives', async () => {
             let rootHashIncetives = this.airdropper.getRootHash();
-            // Set the incentives root hash
+            // First pause the contract
+            await this.airdrop.pause().should.be.fulfilled;
+            // Then set the incentives root hash
             await this.airdrop.setIncentives(rootHashIncetives).should.be.fulfilled;
             // Get the incetive root hash
-            let expectedRootHashIncentives = await this.airdrop.rootHashIncentives();
+            let expectedRootHashIncentives = await this.airdrop.incentiveRoothash();
             // Compare the expected value and the value set in advance
             expectedRootHashIncentives.should.equalIgnoreCase(rootHashIncetives);
         });
@@ -81,11 +88,46 @@ contract('Airdrop', () => {
     });
 
     describe('Non-authorized callee', () => {
-        it('should not be able to call admin functions', async () => {
-            let tokenAmount = new BigNumber(5000);
-            let rootHashIncetives = this.airdropper.getRootHash();
+        it('should not be able to add/remove admin', async () => {
+            // Try to add an address to blacklist as non-authorized callee
+            await this.airdrop.addAdmin(web3.eth.accounts[9], {from: nonAuthorizedAddr}).should.be.rejected;
+
+            // Add an address to blacklist as admin
+            await this.airdrop.addAdmin(web3.eth.accounts[9]).should.be.fulfilled;
+            // And then try to remove an address from blacklist as a non-authorized callee
+            await this.airdrop.removeAdmin(web3.eth.accounts[9], {from: nonAuthorizedAddr}).should.be.rejected;
+        });
+
+        it('should not be able to add/remove addresses to blacklist', async () => {
+            // Try to add an address to blacklist as non-authorized callee
+            await this.airdrop.addToBlackList(web3.eth.accounts[9], {from: nonAuthorizedAddr}).should.be.rejected;
+
+            // Add an address to blacklist as admin
+            await this.airdrop.addToBlackList(web3.eth.accounts[9]).should.be.fulfilled;
+            // And then try to remove an address from blacklist as a non-authorized callee
+            await this.airdrop.addToBlackList(web3.eth.accounts[9], {from: nonAuthorizedAddr}).should.be.rejected;
+        });
+
+        it('should not be able to pause and unpause the contract', async () => {
+            // Try to pause the contract
+            await this.airdrop.pause({from: nonAuthorizedAddr}).should.be.rejected;
+
+            // First pause the contract as admin
+            await this.airdrop.pause().should.be.fulfilled
+            // Then try unpause it as a non-authorized callee
+            await this.airdrop.unpause({from: nonAuthorizedAddr}).should.be.rejected;
+        });
+
+        it('should not be able to set incentives', async () => {
+            // First pause the contract as admin
+            await this.airdrop.pause().should.be.fulfilled;
             // Try to set the root hash of incentives as a non-authorized callee (who is not admin)
-            await this.airdrop.setIncentives(rootHashIncetives, {from: nonAuthorizedAddr}).should.be.rejected;
+            await this.airdrop.setIncentives(this.airdropper.getRootHash(), {from: nonAuthorizedAddr}).should.be.rejected;
+        });
+
+        it('should not be able to withdraw ether or token', async () => {
+            let tokenAmount = new BigNumber(5000);
+
             // Try to withdraw some ether from Airdrop contrcat
             await this.airdrop.withdrawEtherAuthorized(Utils.ether(1), {from: nonAuthorizedAddr}).should.be.rejected;
             // Try to withdraw some token from irdrop contrcat
@@ -101,6 +143,8 @@ contract('Airdrop', () => {
         let postClaimerTokenBalance;
 
         beforeEach(async () => {
+            // First pause the contract as admin
+            await this.airdrop.pause().should.be.fulfilled
             // Set the root hash of incentives
             await this.airdrop.setIncentives(this.airdropper.getRootHash()).should.be.fulfilled;
             // Get token balance of the claimer before any claim
@@ -120,7 +164,17 @@ contract('Airdrop', () => {
             postClaimerTokenBalance.should.be.bignumber.equal(preClaimerTokenBalance.add(amount));
         });
 
-        it('should not be able to claim incentive more than one', async () => {
+        it('should not be able to claim incentive when the contract is paused', async () => {
+            // Pause the contract as admin
+            await this.airdrop.pause().should.be.fulfilled;
+
+            // Calculate merkle proof for the given claimer's address
+            let merkleProof = this.airdropper.getMerkleProof(index);
+            // Claim the incentive as a client
+            await this.airdrop.claim(index, amount, merkleProof, {from: claimer}).should.be.rejected;
+        });
+
+        it('should not be able to claim incentive more than once', async () => {
             // Calculate merkle proof for the given claimer's address
             let merkleProof = this.airdropper.getMerkleProof(index);
             // Claim the incentive as a client
@@ -135,10 +189,13 @@ contract('Airdrop', () => {
             let merkleProof = this.airdropper.getMerkleProof(index);
             // Claim the incentive
             await this.airdrop.claim(index, amount, merkleProof, {from: claimer}).should.be.fulfilled;
+
             // Calculate the root hash of new incentives
             let newAirdropBalances = createAirdropBalanceDB(web3.eth.accounts, 300);
             this.airdropper.updateRootHash(newAirdropBalances);
+
             // Update the root hash in Airdrop contract
+            await this.airdrop.pause().should.be.fulfilled;
             await this.airdrop.setIncentives(this.airdropper.getRootHash()).should.be.fulfilled;
             
             // New incentive should be claimable
@@ -162,6 +219,7 @@ contract('Airdrop', () => {
 
         beforeEach(async () => {
             // Set the root hash of incentives
+            await this.airdrop.pause().should.be.fulfilled;
             await this.airdrop.setIncentives(this.airdropper.getRootHash()).should.be.fulfilled;
         });
 
@@ -170,6 +228,28 @@ contract('Airdrop', () => {
             let merkleProof = this.airdropper.getMerkleProof(index);
             // Claim the incentive with the correct parameters as non-airdropped user
             await this.airdrop.claim(index, amount, merkleProof, {from: nonAirdroppedAccount}).should.be.rejected;
+        });
+    });
+
+    describe('Blacklisted account', () => {
+        let index = 9;
+        let claimer = web3.eth.accounts[index];
+        let amount = new BigNumber(airdropBalances[claimer]);
+
+        beforeEach(async () => {
+            // Set the root hash of incentives
+            await this.airdrop.pause().should.be.fulfilled;
+            await this.airdrop.setIncentives(this.airdropper.getRootHash()).should.be.fulfilled;
+
+            // Blacklist the claimer
+            await this.airdrop.addToBlackList(claimer).should.be.fulfilled;
+        });
+
+        it('should not be able to claim incentive', async () => {
+            // Calculate merkle proof for the given claimer's address
+            let merkleProof = this.airdropper.getMerkleProof(index);
+            // Claim the incentive with the correct parameters as non-airdropped user
+            await this.airdrop.claim(index, amount, merkleProof, {from: claimer}).should.be.rejected;
         });
     });
 });

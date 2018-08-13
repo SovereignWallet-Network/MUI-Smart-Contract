@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity 0.4.24;
 
 import "../ownership/Ownable.sol";
 import "../token/ERC20.sol";
@@ -20,7 +20,7 @@ contract Destructible is Ownable {
      * @notice The called token contracts could try to re-enter this contract. 
      * Only supply token contracts you trust.
      */
-    function destroy(address[] tokens) onlyOwner public {
+    function destroy(address[] tokens) public onlyOwner {
         // Transfer tokens to owner
         clearAllTokens(tokens, owner);
         // Transfer Eth to owner and terminate contract
@@ -34,7 +34,7 @@ contract Destructible is Ownable {
      * @notice The called token contracts could try to re-enter this contract. 
      * Only supply token contracts you trust.
      */
-    function destroyAndSend(address[] tokens, address recipient) onlyOwner public {
+    function destroyAndSend(address[] tokens, address recipient) public onlyOwner {
         // Transfer tokens to owner
         clearAllTokens(tokens, recipient);
         // Transfer Eth to owner and terminate contract

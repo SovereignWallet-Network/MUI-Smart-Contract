@@ -26,6 +26,12 @@ module.exports = (deployer, network, accounts) => {
         .then( _ => console.log('ACB contract has been deployed successfully.'));
 };*/
 
+// Testnet deployment of Airdrop contract
+// module.exports = (deployer, network, accounts) => {
+//     deployer.deploy(Airdrop, MUIBT_TOKEN_ADDRESS)
+//         .then( _ => console.log('Airdrop contract has been deployed successfully.'));
+// };
+
 
 
 // Notice that in mainnet deployments we set a delay before resolving the deployer.deploy() fucntion
