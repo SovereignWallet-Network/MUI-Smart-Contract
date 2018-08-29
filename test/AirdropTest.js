@@ -12,7 +12,8 @@ const MuiToken = artifacts.require("MuiToken");
 
 
 contract('Airdrop', () => {
-    let airdropSupply = new BigNumber(1000000);
+    let tokenDecimals = new BigNumber(6);
+    let airdropSupply = (new BigNumber(50000)).times(Math.pow(10, tokenDecimals));
     // Notice that this approximation does not neccessarily mean that it is correct.
     // Therefore do not rely on this approximation all the time
     // If there needs fine tuning to check/compare ether balances before and after transactions,
@@ -27,8 +28,8 @@ contract('Airdrop', () => {
     beforeEach(async () => {
         // Deploy MUI Token contract
         this.token = await MuiToken.new(beneficiary);
-        // Deploy Airdrop contract
-        this.airdrop = await Airdrop.new(this.token.address);
+        // Deploy Airdrop contract for MUI token which has 6 decimals
+        this.airdrop = await Airdrop.new(this.token.address, tokenDecimals);
         // Fund the Airdrop contract with MUI token
         await this.token.transfer(this.airdrop.address, airdropSupply, {from: beneficiary});
 
@@ -161,7 +162,7 @@ contract('Airdrop', () => {
             isClaimed.should.be.true;
             // Check claimer token balance if it increases by amount of incetive claimed
             postClaimerTokenBalance = await this.token.balanceOf(claimer);
-            postClaimerTokenBalance.should.be.bignumber.equal(preClaimerTokenBalance.add(amount));
+            postClaimerTokenBalance.should.be.bignumber.equal(preClaimerTokenBalance.add(amount.times(Math.pow(10, tokenDecimals))));
         });
 
         it('should not be able to claim incentive when the contract is paused', async () => {

@@ -1,5 +1,6 @@
 pragma solidity 0.4.24;
 
+import "./utils/SafeMath.sol";
 import "./token/ERC20.sol";
 import "./token/Withdrawable.sol";
 import "./token/Depositable.sol";
@@ -22,17 +23,20 @@ import "./lifecycle/Pausable.sol";
  * the attacker can never claim with correct inputs by himself.
  */
 contract Airdrop is Withdrawable, Depositable, Destructible, Pausable {
+    using SafeMath for uint256;
 
     ERC20 public token;
     bytes32 public incentiveRoothash;
     mapping (uint256 => mapping (uint256 => uint256)) public redeemTable;
     uint256 public version = 0;
+    uint256 public tokenDecimal;
 
     event Claimed(address indexed claimer, uint256 amount);
 
 
-    constructor(ERC20 tokenAddress) public {
+    constructor(ERC20 tokenAddress, uint256 _tokenDecimal) public {
         token = ERC20(tokenAddress);
+        tokenDecimal = _tokenDecimal;
     }
 
     /**
@@ -57,12 +61,24 @@ contract Airdrop is Withdrawable, Depositable, Destructible, Pausable {
     }
 
     /**
-     * @dev Checks whether the incentive with the given index is already claimed or not
+     * @dev Checks whether the incentive with the given index 
+            is already claimed or not in the current version.
      * @param index uint256 Index to be checked
      * @return True if it is already claimed, false otherwise
      */
     function isClaimed(uint256 index) public view returns (bool) {
-        mapping (uint256 => uint256) redeemed = redeemTable[version];
+        return isClaimedInVersion(index, version);
+    }
+
+    /**
+     * @dev Checks whether the incentive with the given index 
+     *      is already claimed or not in the given version.
+     * @param index uint256 Index to be checked
+     * @param _version uint256 Version of the table to be used in claim check
+     * @return True if it is already claimed, false otherwise
+     */
+    function isClaimedInVersion(uint256 index, uint256 _version) public view returns (bool) {
+        mapping (uint256 => uint256) redeemed = redeemTable[_version];
         uint256 redeemedBlock = redeemed[index / 256];
         uint256 redeemedMask = (uint256(1) << uint256(index % 256));
         return ((redeemedBlock & redeemedMask) != 0);
@@ -82,7 +98,7 @@ contract Airdrop is Withdrawable, Depositable, Destructible, Pausable {
         // Check the merkle proof
         require(checkMerkleProof(index, msg.sender, amount, merkleProof), "Merkle proof does not match!");
         // Redeem incentivized tokens
-        withdrawToken(token, msg.sender, amount);
+        withdrawToken(token, msg.sender, amount.mul(10 ** tokenDecimal));
 
         emit Claimed(msg.sender, amount);
     }
