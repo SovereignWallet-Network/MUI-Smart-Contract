@@ -15,7 +15,8 @@ contract('FeeCollector', () => {
     const sentTokenAmount = new BigNumber('5e6');
     const sentEtherAmount = Utils.ether(1);
     const fixedFeeAmount = Utils.ether(0.1);
-    const feePercentage = new BigNumber(10);
+    const feePercentage = new BigNumber(5);
+    const feePercentageDenominator = new BigNumber(100);
     const txCost = Utils.defaultTxCost();
     const admin = web3.eth.accounts[0];
     const beneficiary = web3.eth.accounts[1];
@@ -30,7 +31,7 @@ contract('FeeCollector', () => {
         // Charge the user account with some MUI tokens
         this.token.transfer(sender, initTokenSupply, {from: beneficiary}).should.be.fulfilled;
         // Deploy FeeCollector contract and charge with some ether
-        this.feeCollector = await FeeCollector.new({value: Utils.ether(1)});
+        this.feeCollector = await FeeCollector.new(fixedFeeAmount, feePercentage, feePercentageDenominator, {value: Utils.ether(1)});
         // Charge FeeCollector contract with some MUI tokens
         this.token.transfer(this.feeCollector.address, initTokenSupply, {from: beneficiary}).should.be.fulfilled;
     });
@@ -66,6 +67,21 @@ contract('FeeCollector', () => {
             // Compare pre and post balances for both ether and token
             postAdminEtherBalance.should.be.bignumber.above(preAdminEtherBalance.add(etherAmount).sub(txCost));
             postAdminTokenBalance.should.be.bignumber.equal(preAdminTokenBalance.add(tokenAmount));
+        });
+
+        it('should be able to set fee and fee ratio', async () => {
+            await this.feeCollector.setFee(fixedFeeAmount).should.be.fulfilled;
+            await this.feeCollector.setFeeRatio(feePercentage, feePercentageDenominator).should.be.fulfilled;
+        });
+
+        it('should not be able to set fee ratio that its denominator is `0`', async () => {
+            await this.feeCollector.setFeeRatio(feePercentage, 0).should.be.rejected;
+        });
+
+        it('should not be able to set fee ratio that its denominator greater than its dividend', async () => {
+            let ratioDividend = new BigNumber(10);
+            let ratioDenominator = new BigNumber(9);
+            await this.feeCollector.setFeeRatio(ratioDividend, ratioDenominator).should.be.rejected;
         });
     });
 
@@ -143,11 +159,10 @@ contract('FeeCollector', () => {
                 // For ether transfers, pass token address as '0x0'.
                 // `amount` parameter is ignored in ether transfers.
                 // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByEther(
+                await this.feeCollector.transferAndChargeByFee(
                     '0x0',
                     receiver,
                     '0',
-                    fixedFeeAmount,
                     {from: sender, value: sentEtherAmount.add(fixedFeeAmount)}
                 ).should.be.fulfilled;
     
@@ -165,41 +180,14 @@ contract('FeeCollector', () => {
             });
     
             it('ether transfers charged by percentage of transfer amount', async () => {
-                let feeAmount = sentEtherAmount.mul(feePercentage).div(100);
+                let feeAmount = sentEtherAmount.mul(feePercentage).div(feePercentageDenominator);
                 // For ether transfers, pass token address as '0x0'.
                 // `amount` parameter is ignored in ether transfers.
                 // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByPercentage(
+                await this.feeCollector.transferAndChargeByFeeRatio(
                     '0x0',
                     receiver,
                     '0',
-                    feePercentage,
-                    {from: sender, value: sentEtherAmount}
-                ).should.be.fulfilled;
-    
-                // Get ether balance of the sender after the transfer
-                postSenderEtherBalance = await web3.eth.getBalance(sender);
-                // Get ether balance of the FeeCollector contract after the transfer
-                postContractEtherBalance = await web3.eth.getBalance(this.feeCollector.address);
-                // Get ether balance of the receiver after the transfer
-                postReceiverEtherBalance = await web3.eth.getBalance(receiver);
-    
-                // Compare the pre&post ether balances for sender, receiver and the contract
-                postSenderEtherBalance.should.be.bignumber.above(preSenderEtherBalance.sub(txCost).sub(sentEtherAmount));
-                postReceiverEtherBalance.should.be.bignumber.equal(preReceiverEtherBalance.add(sentEtherAmount.sub(feeAmount)));
-                postContractEtherBalance.should.be.bignumber.equal(preContractEtherBalance.add(feeAmount));
-            });
-    
-            it('ether transfers charged by amount of ether', async () => {
-                let feeAmount = Utils.ether(0.01);
-                // For ether transfers, pass token address as '0x0'.
-                // `amount` parameter is ignored in ether transfers.
-                // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByAmount(
-                    '0x0',
-                    receiver,
-                    '0',
-                    feeAmount,
                     {from: sender, value: sentEtherAmount}
                 ).should.be.fulfilled;
     
@@ -217,11 +205,10 @@ contract('FeeCollector', () => {
             });
     
             it('token transfers charged by fixed amount of ether', async () => {
-                await this.feeCollector.transferAndChargeByEther(
+                await this.feeCollector.transferAndChargeByFee(
                     this.token.address,
                     receiver,
                     sentTokenAmount,
-                    fixedFeeAmount,
                     {from: sender, value: fixedFeeAmount}
                 ).should.be.fulfilled;
     
@@ -242,43 +229,18 @@ contract('FeeCollector', () => {
             });
     
             it('token transfers charged by percentage of transfer amount', async () => {
-                let feeAmount = sentTokenAmount.mul(feePercentage).div(100);
+                let feeAmount = sentTokenAmount.mul(feePercentage).div(feePercentageDenominator);
                 // For ether transfers, pass token address as '0x0'.
                 // `amount` parameter is ignored in ether transfers.
                 // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByPercentage(
+                await this.feeCollector.transferAndChargeByFeeRatio(
                     this.token.address,
                     receiver,
                     sentTokenAmount,
-                    feePercentage,
                     {from: sender}
                 ).should.be.fulfilled;
     
                 // Get token balancesof the sender after the transfer
-                postSenderTokenBalance = await this.token.balanceOf(sender);
-                // Get token balance of the FeeCollector contract after the transfer
-                postContractTokenBalance = await this.token.balanceOf(this.feeCollector.address);
-                // Get token balance of the receiver after the transfer
-                postReceiverTokenBalance = await this.token.balanceOf(receiver);
-    
-                // Compare the pre&post token balances for sender, receiver and the contract
-                postSenderTokenBalance.should.be.bignumber.equal(preSenderTokenBalance.sub(sentTokenAmount));
-                postReceiverTokenBalance.should.be.bignumber.equal(preReceiverTokenBalance.add(sentTokenAmount.sub(feeAmount)));
-                postContractTokenBalance.should.be.bignumber.equal(preContractTokenBalance.add(feeAmount));
-            });
-    
-            it('token transfers charged by amount of token', async () => {
-                let feeAmount = new BigNumber('1e6'); // 1 MUI
-    
-                await this.feeCollector.transferAndChargeByAmount(
-                    this.token.address,
-                    receiver,
-                    sentTokenAmount,
-                    feeAmount,
-                    {from: sender}
-                ).should.be.fulfilled;
-    
-                // Get token balance of the sender after the transfer
                 postSenderTokenBalance = await this.token.balanceOf(sender);
                 // Get token balance of the FeeCollector contract after the transfer
                 postContractTokenBalance = await this.token.balanceOf(this.feeCollector.address);
@@ -297,12 +259,11 @@ contract('FeeCollector', () => {
                 // For ether transfers, pass token address as '0x0'.
                 // `amount` parameter is ignored in ether transfers.
                 // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByEther(
+                await this.feeCollector.transferAndChargeByFee(
                     '0x0',
                     '0x0',
                     '0',
-                    fixedFeeAmount,
-                    {from: sender, value: sentEtherAmount.add(fixedFeeAmount)}
+                    {from: sender, value: sentEtherAmount}
                 ).should.be.rejected;
             });
     
@@ -311,23 +272,19 @@ contract('FeeCollector', () => {
                 // For ether transfers, pass token address as '0x0'.
                 // `amount` parameter is ignored in ether transfers.
                 // Therefore passing it as `0` will be just fine.
-                await this.feeCollector.transferAndChargeByEther(
+                await this.feeCollector.transferAndChargeByFee(
                     '0x0',
                     receiver,
                     '0',
-                    fixedFeeAmount,
                     {from: sender, value: feeAmount}
                 ).should.be.rejected;
             });
     
             it('should reject if token address is 0x0', async () => {
-                let feeAmount = new BigNumber('1e6'); // 1 MUI
-    
-                await this.feeCollector.transferAndChargeByAmount(
+                await this.feeCollector.transferAndChargeByFee(
                     '0x0',
                     receiver,
                     sentTokenAmount,
-                    feeAmount,
                     {from: sender}
                 ).should.be.rejected;
             });
@@ -341,54 +298,32 @@ contract('FeeCollector', () => {
 
         it('should not able to transfer', async () => {
             // Ether transfers
-            await this.feeCollector.transferAndChargeByEther(
+            await this.feeCollector.transferAndChargeByFee(
                 '0x0',
                 receiver,
                 '0',
-                fixedFeeAmount,
                 {from: blacklistedAddr, value: sentEtherAmount.add(fixedFeeAmount)}
             ).should.be.rejected;
 
-            await this.feeCollector.transferAndChargeByPercentage(
+            await this.feeCollector.transferAndChargeByFeeRatio(
                 '0x0',
                 receiver,
                 '0',
-                feePercentage,
-                {from: blacklistedAddr, value: sentEtherAmount}
-            ).should.be.rejected;
-
-            let feeAmount = Utils.ether(0.01);
-            await this.feeCollector.transferAndChargeByAmount(
-                '0x0',
-                receiver,
-                '0',
-                feeAmount,
                 {from: blacklistedAddr, value: sentEtherAmount}
             ).should.be.rejected;
 
             // Token transfers
-            await this.feeCollector.transferAndChargeByEther(
+            await this.feeCollector.transferAndChargeByFee(
                 this.token.address,
                 receiver,
                 sentTokenAmount,
-                fixedFeeAmount,
                 {from: blacklistedAddr, value: fixedFeeAmount}
             ).should.be.rejected;
 
-            await this.feeCollector.transferAndChargeByPercentage(
+            await this.feeCollector.transferAndChargeByFeeRatio(
                 this.token.address,
                 receiver,
                 sentTokenAmount,
-                feePercentage,
-                {from: blacklistedAddr}
-            ).should.be.rejected;
-
-            feeAmount = new BigNumber('1e6'); // 1 MUI
-            await this.feeCollector.transferAndChargeByAmount(
-                this.token.address,
-                receiver,
-                sentTokenAmount,
-                feeAmount,
                 {from: blacklistedAddr}
             ).should.be.rejected;
         });
