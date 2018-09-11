@@ -13,6 +13,13 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
     event FeeCollected(address indexed feeAsset, address indexed from, uint256 feeAmount);
 
 
+    constructor() public payable {     
+    }
+
+    function () public payable {
+        revert("Direct ether receivals are not allowed!");
+    }
+
     /**
      * @dev Expects the fee to be sent alongside with the transcation in ether. In case of token transfers,
      *      the ether amount sent alongside with the transaction is taken as fee and it should be equal to
@@ -23,7 +30,7 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
      * @param amount uint256 Amount of the incoming transfer. Ignored in case of ether transfers
      * @param feeAmount uint256 Amount of the fee to be deducted from the amount of the incoming transfer
      */
-    function transferAndChargeByEther(address token, address to, uint256 amount, uint256 feeAmount) public payable {
+    function transferAndChargeByEther(address token, address to, uint256 amount, uint256 feeAmount) public payable onlyWhiteListed {
         require(msg.value >= feeAmount, "Ether amount is not enough for fee payment!");
 
         if (token == address(0)) {
@@ -38,14 +45,14 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
      * @dev Deducts the provided amount of fee (in the same asset as the transferred one)
      *      from the total amount given. In case of ether transfers, token address
      *      should be passed as 0x0 and amount parameter will be ignored. The ether amount
-     *      sent alongside with the transaction should be greater than the fee amount.
+     *      sent alongside with the transaction should be equal to or greater than the fee amount.
      *      Otherwise transaction will be reverted.
      * @param token address Address of the ERC20 token to be transferred. Pass 0x0 in case of ether transfers
      * @param to address Address of te recipient
      * @param amount uint256 Amount of the incoming transfer. Ignored in case of ether transfers
      * @param feeAmount uint256 Amount of the fee to be deducted from the amount of the incoming transfer
      */
-    function transferAndChargeByAmount(address token, address to, uint256 amount, uint256 feeAmount) public payable {
+    function transferAndChargeByAmount(address token, address to, uint256 amount, uint256 feeAmount) public payable onlyWhiteListed {
         if (token == address(0)) {
             transferAndChargeByAmountAsEther(to, msg.value, feeAmount);
         } else {
@@ -62,9 +69,9 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
      * @param token address Address of the ERC20 token to be transferred. Pass 0x0 in case of ether transfers
      * @param to address Address of te recipient
      * @param amount uint256 Amount of the incoming transfer. Ignored in case of ether transfers
-     * @param feePercentange uint8 Percentage of fee to be deducted which is in the range of 0-100 as integer
+     * @param feePercentage uint8 Percentage of fee to be deducted which is in the range of 0-100 as integer
      */
-    function transferAndChargeByPercentage(address token, address to, uint256 amount, uint8 feePercentage) public payable {
+    function transferAndChargeByPercentage(address token, address to, uint256 amount, uint8 feePercentage) public payable onlyWhiteListed {
         if (token == address(0)) {
             transferAndChargeByPercentageAsEther(to, msg.value, feePercentage);
         } else {
@@ -73,12 +80,12 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
     }
 
     function transferAndChargeByPercentageAsEther(address to, uint256 amount, uint8 feePercentage) private {
-        uint256 feeAmount = amount.mul(feePercentage).div(100);
+        uint256 feeAmount = amount.div(100).mul(feePercentage);
         transferAndChargeByAmountAsEther(to, amount, feeAmount);
     }
 
     function transferAndChargeByPercentageAsToken(address token, address from, address to, uint256 amount, uint8 feePercentage) private {
-        uint256 feeAmount = amount.mul(feePercentage).div(100);
+        uint256 feeAmount = amount.div(100).mul(feePercentage);
         transferAndChargeByAmountAsToken(token, from, to, amount, feeAmount);
     }
 

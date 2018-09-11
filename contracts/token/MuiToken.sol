@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 
 import "./PausableToken.sol";
 import "../ownership/Claimable.sol";
-import "./BulkTransferable.sol";
 
 /**
  * @title MUI Token

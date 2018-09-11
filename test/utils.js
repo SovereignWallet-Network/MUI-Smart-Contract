@@ -8,6 +8,26 @@ function ether(n) {
 }
 
 /**
+ * Converts gwei to wei
+ * 
+ * @param {Number} n Gwei value to be converted to wei.
+ */
+function gwei(n) {
+    return new web3.BigNumber(web3.toWei(n, 'gwei'));
+}
+
+// Notice that this approximation does not neccessarily mean that it is correct.
+// Therefore do not rely on this approximation all the time
+// If there needs fine tuning to check/compare ether balances before and after transactions,
+// change this gas limit and fee accordingly!
+function defaultTxCost() {
+    let gasFee = new web3.BigNumber(web3.toWei(100, 'gwei'));
+    let gasLimit = new web3.BigNumber('200000');
+
+    return gasFee.mul(gasLimit);
+}
+
+/**
  * Calculates value of the given amount of token in ether.
  * 
  * @param {web3.BigNumber} tokenAmount 
@@ -24,6 +44,8 @@ function calculateCost(tokenAmount, tokenPrice, feeRate, isBuy) {
 }
   
 module.exports = {
-    ether: ether,
-    calculateCost: calculateCost
+    ether,
+    gwei,
+    defaultTxCost,
+    calculateCost
 }
