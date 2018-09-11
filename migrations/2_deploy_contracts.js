@@ -1,10 +1,17 @@
-const MuiToken = artifacts.require("./MuiToken.sol");
-const ACB = artifacts.require("./PhaseBasedACB.sol");
-const Airdrop = artifacts.require("./Airdrop.sol");
+const MuiToken = artifacts.require('./MuiToken.sol');
+const ACB = artifacts.require('./PhaseBasedACB.sol');
+const Airdrop = artifacts.require('./Airdrop.sol');
+const FeeCollector = artifacts.require('./FeeCollector.sol');
 
 const initialSellPrice = 6 * 10 ** 9;       // 1 ether = 6000 MUI
-// TODO: Change this number if you want to fund ACB contract with ether
+// Change this number if you want to fund ACB contract with ether
 const initialEtherDeposit = 10 * 10 ** 18;   // 10 ether
+
+// Change these variables as needed
+const fee = 10 ** 16        // 0.01 ether
+const feeRatioDividend = 10
+const feeRatioDenominator = 100
+
 
 // Keep this for unit tests
 module.exports = (deployer, network, accounts) => {
@@ -61,7 +68,7 @@ module.exports = (deployer, network, accounts) => {
 /**************Airdrop*****************/
 // Mainnet
 // Mainnet deployment of Airdrop contract
-// @see https://etherscan.io/address/<address>
+// @see https://etherscan.io/address/0x014ab4e86f5F46AE6F1CB83e5cC8aEB62a84604C
 
 // Ropsten
 // Testnet deployment of Airdrop contract
@@ -75,6 +82,26 @@ module.exports = (deployer, network, accounts) => {
 // module.exports = (deployer, network, accounts) => {
 //     deployer.deploy(Airdrop, MUI_TOKEN_ADDRESS, 6)
 //         .then( _ => console.log('Airdrop contract has been deployed successfully.'));
+// };
+
+
+/**************FeeCollector*****************/
+// Mainnet
+// Mainnet deployment of FeeCollector contract
+// @see https://etherscan.io/address/
+
+// Ropsten
+// Testnet deployment of FeeCollector contract
+// @see https://ropsten.etherscan.io/address/0xd5a21640fe441ad04c5a12648b0d71b4ed8e685b
+
+// Rinkeby
+// Testnet deployment of FeeCollector contract
+// @see https://rinkeby.etherscan.io/address/0x185de914dc95f402c0cec883742e32476d8f609a
+
+// Testnet Deployer
+// module.exports = (deployer, network, accounts) => {
+//     deployer.deploy(FeeCollector, fee, feeRatioDividend, feeRatioDenominator)
+//         .then( _ => console.log('FeeCollector contract has been deployed successfully.'));
 // };
 
 
@@ -104,6 +131,15 @@ module.exports = (deployer, network, accounts) => {
 //     // Deploy Airdrop contract
 //     deployer.deploy(Airdrop, MUI_TOKEN_ADDRESS, 6)
 //         .then(() => Airdrop.deployed())
+//         .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 150000)))
+//         .catch(e => console.log(`Deployer failed. ${e}`));
+// };
+
+// Mainnet deployer of FeeCollector contract
+// module.exports = (deployer, network, accounts) => {
+//     // Deploy FeeCollector contract
+//     deployer.deploy(FeeCollector, fee, feeRatioDividend, feeRatioDenominator)
+//         .then(() => FeeCollector.deployed())
 //         .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 150000)))
 //         .catch(e => console.log(`Deployer failed. ${e}`));
 // };
