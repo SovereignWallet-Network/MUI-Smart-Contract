@@ -88,7 +88,7 @@ module.exports = (deployer, network, accounts) => {
 /**************FeeCollector*****************/
 // Mainnet
 // Mainnet deployment of FeeCollector contract
-// @see https://etherscan.io/address/
+// @see https://etherscan.io/address/0xfbf17455eb6141b20572ca3c98cda244f1b57931
 
 // Ropsten
 // Testnet deployment of FeeCollector contract
