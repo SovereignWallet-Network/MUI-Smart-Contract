@@ -23,7 +23,7 @@ contract Depositable {
      * @param amount uint256 Amount of the token to be deposited to this contract
      */
     function depositToken(ERC20 token, address sendFrom, uint256 amount) internal {
-        require(token.transferFrom(sendFrom, address(this), amount), "transferFrom function has been reverted!");
+        token.transferFrom(sendFrom, address(this), amount);
         emit TokenDeposit(token, sendFrom, amount);
     }
 

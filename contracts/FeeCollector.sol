@@ -71,7 +71,7 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
         if (token == address(0)) {
             transferAndChargeByEther(to, msg.value, fee);
         } else {
-            require(ERC20(token).transferFrom(msg.sender, to, amount), "Cannot transfer asset to the recipient!");
+            ERC20(token).transferFrom(msg.sender, to, amount);
             emit FeeCollected(token, msg.sender, fee);
         }
     }
@@ -105,9 +105,9 @@ contract FeeCollector is Withdrawable, Destructible, Pausable {
     function transferAndChargeByToken(address token, address from, address to, uint256 amount, uint256 feeAmount) private {
         require(token != address(0), "Token address cannot be 0x0!");
         // Collect fee
-        require(ERC20(token).transferFrom(from, address(this), feeAmount), "Cannot transfer fee to the fee collector!");
+        ERC20(token).transferFrom(from, address(this), feeAmount);
         // And transfer the remaining amount to the recipient
-        require(ERC20(token).transferFrom(from, to, amount.sub(feeAmount)), "Cannot transfer asset to the recipient!");
+        ERC20(token).transferFrom(from, to, amount.sub(feeAmount));
 
         emit FeeCollected(token, from, feeAmount);
     }
