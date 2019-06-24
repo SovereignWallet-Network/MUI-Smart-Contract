@@ -28,7 +28,7 @@ contract Airdrop is Withdrawable, Depositable, Destructible, Pausable {
     ERC20 public token;
     bytes32 public incentiveRoothash;
     mapping (uint256 => mapping (uint256 => uint256)) public redeemTable;
-    uint256 public version = 0;
+    uint256 public version = 0; // Before deploying, must be updated to current version to manitain sync with firebase.
     uint256 public tokenDecimal;
 
     event Claimed(address indexed claimer, uint256 amount);
@@ -101,6 +101,26 @@ contract Airdrop is Withdrawable, Depositable, Destructible, Pausable {
         withdrawToken(token, msg.sender, amount.mul(10 ** tokenDecimal));
 
         emit Claimed(msg.sender, amount);
+    }
+
+    /**
+     * @dev Claims the incentive on behalf of claimer and transfers cliamed amount of token to the recipient.
+     * @param index uint256 Index to be claimed
+     * @param recipient address Claimer's address
+     * @param amount uint256 Amount of token to be claimed
+     * @param merkleProof bytes32[] Merkle Tree Proof for the given input and claimer
+     */
+    function claimForRecipient(uint256 index, address recipient, uint256 amount, bytes32[] merkleProof) external onlyWhiteListed whenNotPaused {
+        // Check whether this incentive is already claimed or not
+        // If it is so, revert. Otherwise mark it as claimed
+        // If the merkle proof does not check, this part will be reverted too.
+        markClaimed(index);
+        // Check the merkle proof
+        require(checkMerkleProof(index, recipient, amount, merkleProof), "Merkle proof does not match!");
+        // Redeem incentivized tokens
+        withdrawToken(token, recipient, amount.mul(10 ** tokenDecimal));
+
+        emit Claimed(recipient, amount);
     }
 
     /**

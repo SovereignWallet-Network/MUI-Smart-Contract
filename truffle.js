@@ -26,6 +26,16 @@ module.exports = {
       network_id: 42,
       gas: 4700000,
       gasPrice: 50000000000  // 50 Gwei
+    },
+    "development": {
+      host: "127.0.0.1",
+      port: 7545,
+      network_id: 5777,
     }
-  }
+  },
+  compilers: {
+    solc: {
+      version: "0.4.24"  // ex:  "0.4.20". (Default: Truffle's installed solc)
+    }
+ }
 };

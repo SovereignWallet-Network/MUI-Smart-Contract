@@ -143,3 +143,25 @@ module.exports = (deployer, network, accounts) => {
 //         .then(registry => new Promise(resolve => setTimeout(() => resolve(registry), 150000)))
 //         .catch(e => console.log(`Deployer failed. ${e}`));
 // };
+
+// For local testing only
+    module.exports = (deployer, network, accounts) => {
+        deployer.deploy(MuiToken, accounts[0])
+            .then( _ =>{ 
+                console.log('Mui Token contract has been deployed successfully.',MuiToken.address);
+                deployer.deploy(ACB, MuiToken.address, 0, initialSellPrice, {value: initialEtherDeposit})
+                        .then( _ => {
+                            console.log('ACB contract has been deployed successfully.',ACB.address);
+                            deployer.deploy(Airdrop, MuiToken.address, 6)
+                                .then( _ => {
+                                    console.log('Airdrop contract has been deployed successfully.',Airdrop.address);
+                                    deployer.deploy(FeeCollector, fee, feeRatioDividend, feeRatioDenominator)
+                                        .then( _ => console.log('FeeCollector contract has been deployed successfully.'))
+                                        .catch(e => console.log(`FeeCollector Deployer failed. ${e}`));       
+                                })
+                                .catch(e => console.log(`Airdrop Deployer failed. ${e}`));  
+                        })
+                        .catch(e => console.log(`ACB Deployer failed. ${e}`));      
+            })
+            .catch(e => console.log(`MUI Deployer failed. ${e}`));
+    };
