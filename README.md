@@ -56,3 +56,6 @@ Transfers the recipient the ether sent alongside the transaction after fee deduc
 1. Install node v10.4.0
 2. Install test framework by running `npm i -g mocha chai chai-as-promised chai-bignumber`
 3. Run `truffle test` in the project directory.
+
+## Note: 
+Current code works well with truffle@4.1.14 & solidity version set to "0.4.24" without any code changes. 
